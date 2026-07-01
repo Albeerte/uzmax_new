@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>AXON Robot Control</title>
+  <meta name="description" content="AXON unified robot control – movement, hand servos, and head">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1F916;</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ══════  HEADER  ══════ -->
+  <header>
+    <h1>&#x1F916; AXON Robot</h1>
+    <button class="ports-toggle" id="ports-toggle-btn" onclick="togglePortsPanel()">
+      &#x1F50C; USB Ports
+    </button>
+  </header>
+
+  <!-- ══════  PORT SELECTOR PANEL  ══════ -->
+  <div id="ports-panel" class="ports-panel" hidden>
+    <div class="ports-row">
+
+      <!-- Movement ESP32 -->
+      <div class="port-card" id="port-card-move">
+        <div class="port-card-header">
+          <span class="port-card-icon">&#x1F697;</span>
+          <div>
+            <div class="port-card-title">Movement ESP32</div>
+            <div id="move-conn-label" class="port-conn-label offline">Not connected</div>
+          </div>
+          <div id="move-dot" class="status-dot offline"></div>
+        </div>
+        <div class="port-select-row">
+          <select id="move-port-select" class="port-select">
+            <option value="">— select port —</option>
+          </select>
+          <button class="icon-btn" title="Refresh ports" onclick="scanPorts()">&#x21BB;</button>
+        </div>
+        <div class="port-actions">
+          <button class="action-btn blue" id="move-connect-btn"    onclick="connectDevice('move')">Connect</button>
+          <button class="action-btn red"  id="move-disconnect-btn" onclick="disconnectDevice('move')" disabled>Disconnect</button>
+        </div>
+        <div class="port-error" id="move-port-error" hidden></div>
+      </div>
+
+      <!-- Hand ESP32 -->
+      <div class="port-card" id="port-card-hand">
+        <div class="port-card-header">
+          <span class="port-card-icon">&#x1F91A;</span>
+          <div>
+            <div class="port-card-title">Hand ESP32</div>
+            <div id="hand-conn-label" class="port-conn-label offline">Not connected</div>
+          </div>
+          <div id="hand-dot" class="status-dot offline"></div>
+        </div>
+        <div class="port-select-row">
+          <select id="hand-port-select" class="port-select">
+            <option value="">— select port —</option>
+          </select>
+          <button class="icon-btn" title="Refresh ports" onclick="scanPorts()">&#x21BB;</button>
+        </div>
+        <div class="port-actions">
+          <button class="action-btn blue" id="hand-connect-btn"    onclick="connectDevice('hand')">Connect</button>
+          <button class="action-btn red"  id="hand-disconnect-btn" onclick="disconnectDevice('hand')" disabled>Disconnect</button>
+        </div>
+        <div class="port-error" id="hand-port-error" hidden></div>
+      </div>
+
+      <!-- Head ESP32 -->
+      <div class="port-card" id="port-card-head">
+        <div class="port-card-header">
+          <span class="port-card-icon">&#x1F9E0;</span>
+          <div>
+            <div class="port-card-title">Head ESP32</div>
+            <div id="head-conn-label" class="port-conn-label offline">Not connected</div>
+          </div>
+          <div id="head-dot" class="status-dot offline"></div>
+        </div>
+        <div class="port-select-row">
+          <select id="head-port-select" class="port-select">
+            <option value="">— select port —</option>
+          </select>
+          <button class="icon-btn" title="Refresh ports" onclick="scanPorts()">&#x21BB;</button>
+        </div>
+        <div class="port-actions">
+          <button class="action-btn blue" id="head-connect-btn"    onclick="connectDevice('head')">Connect</button>
+          <button class="action-btn red"  id="head-disconnect-btn" onclick="disconnectDevice('head')" disabled>Disconnect</button>
+        </div>
+        <div class="port-error" id="head-port-error" hidden></div>
+      </div>
+
+    </div><!-- /ports-row -->
+  </div><!-- /ports-panel -->
+<!---->
+  <!-- ══════  TAB BAR  ══════ -->
+  <nav class="tab-bar" role="tablist">
+    <button id="tab-move" class="tab active" onclick="switchTab('move')" role="tab" aria-selected="true">
+      &#x1F697;&nbsp; Movement
+      <span id="move-tab-dot" class="tab-dot offline"></span>
+    </button>
+    <button id="tab-hand" class="tab" onclick="switchTab('hand')" role="tab" aria-selected="false">
+      &#x1F91A;&nbsp; Hand
+      <span id="hand-tab-dot" class="tab-dot offline"></span>
+    </button>
+    <button id="tab-head" class="tab" onclick="switchTab('head')" role="tab" aria-selected="false">
+      &#x1F9E0;&nbsp; Head
+      <span id="head-tab-dot" class="tab-dot offline"></span>
+    </button>
+  </nav>
+
+  <!-- ══════  MOVEMENT PANE  ══════ -->
+  <section id="pane-move" class="pane active">
+    <p class="hint">Hold to move &middot; W A S D keys &middot; Space = stop</p>
+
+    <div class="dpad-grid">
+      <button class="btn btn-diag" id="btn-fl" data-cmd="fwd_left">
+        <span class="icon">&#x2196;</span>FWD-L
+      </button>
+      <button class="btn" id="btn-fwd" data-cmd="robot_fwd">
+        <span class="icon">&#x25B2;</span>FWD
+      </button>
+      <button class="btn btn-diag" id="btn-fr" data-cmd="fwd_right">
+        <span class="icon">&#x2197;</span>FWD-R
+      </button>
+
+      <button class="btn" id="btn-left" data-cmd="spin_ccw">
+        <span class="icon">&#x25C0;</span>LEFT
+      </button>
+      <button class="btn btn-stop" id="btn-stop" data-cmd="stop">
+        <span class="icon">&#x25A0;</span>STOP
+      </button>
+      <button class="btn" id="btn-right" data-cmd="spin_cw">
+        <span class="icon">&#x25B6;</span>RIGHT
+      </button>
+
+      <button class="btn btn-diag" id="btn-bl" data-cmd="back_left">
+        <span class="icon">&#x2199;</span>REV-L
+      </button>
+      <button class="btn" id="btn-rev" data-cmd="robot_back">
+        <span class="icon">&#x25BC;</span>REV
+      </button>
+      <button class="btn btn-diag" id="btn-br" data-cmd="back_right">
+        <span class="icon">&#x2198;</span>REV-R
+      </button>
+    </div>
+
+    <div id="move-status" class="status-pill">&#x25CF; System Idle</div>
+
+    <div class="kbd-hint">
+      <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> to move &middot;
+      combine for diagonals &middot; <kbd>Space</kbd> stop
+    </div>
+  </section>
+
+  <!-- ══════  HAND CONTROL PANE  ══════ -->
+  <section id="pane-hand" class="pane">
+
+    <div class="action-strip">
+      <button class="action-btn green"  onclick="sendServo('ALL_START')">All Start</button>
+      <button class="action-btn blue"   onclick="sendServo('RIGHT_START')">Right Start</button>
+      <button class="action-btn blue"   onclick="sendServo('LEFT_START')">Left Start</button>
+      <button class="action-btn green"  onclick="sendServo('OPEN')">Open Hands</button>
+      <button class="action-btn red"    onclick="sendServo('FIST')">Fist</button>
+      <button class="action-btn orange" onclick="sendServo('WAVE')">Wave</button>
+      <button class="action-btn orange" onclick="sendServo('CLAP')">Clap</button>
+    </div>
+
+    <div class="hand-grid">
+      <!-- Right Hand -->
+      <div class="hand-card">
+        <h2>Right Hand</h2>
+        <div class="servo-row">
+          <label>R1 – Wrist Rot<span id="R1_val" class="val">90</span></label>
+          <input type="range" id="R1" min="0"  max="90"  value="90"  oninput="updateServo('R1',this.value)">
+        </div>
+        <div class="servo-row">
+          <label>R2 – Forearm<span id="R2_val" class="val">90</span></label>
+          <input type="range" id="R2" min="0"  max="180" value="90"  oninput="updateServo('R2',this.value)">
+        </div>
+        <div class="servo-row">
+          <label>R3 – Elbow<span id="R3_val" class="val">90</span></label>
+          <input type="range" id="R3" min="90" max="180" value="90"  oninput="updateServo('R3',this.value)">
+        </div>
+        <div class="servo-row">
+          <label>R4 – Shoulder<span id="R4_val" class="val">0</span></label>
+          <input type="range" id="R4" min="0"  max="180" value="0"   oninput="updateServo('R4',this.value)">
+        </div>
+        <div class="servo-row">
+          <label>R5 – Fingers<span id="R5_val" class="val">90</span></label>
+          <input type="range" id="R5" min="90" max="180" value="90"  oninput="updateServo('R5',this.value)">
+        </div>
+        <div class="servo-row">
+          <label>R6 – Thumb<span id="R6_val" class="val">0</span></label>
+          <input type="range" id="R6" min="0"  max="90"  value="0"   oninput="updateServo('R6',this.value)">
+        </div>
+      </div>
+      <!-- Left Hand -->
+      <div class="hand-card">
+        <h2>Left Hand</h2>
+        <div class="servo-row">
+          <label>L1 – Wrist Rot<span id="L1_val" class="val">90</span></label>
+          <input type="range" id="L1" min="0"  max="90"  value="90"  oninput="updateServo('L1',this.value)">
+        </div>
+        <div class="servo-row">
+          <label>L2 – Forearm<span id="L2_val" class="val">0</span></label>
+          <input type="range" id="L2" min="0"  max="180" value="0"   oninput="updateServo('L2',this.value)">
+        </div>
+        <div class="servo-row">
+          <label>L3 – Elbow<span id="L3_val" class="val">90</span></label>
+          <input type="range" id="L3" min="0"  max="90"  value="90"  oninput="updateServo('L3',this.value)">
+        </div>
+        <div class="servo-row">
+          <label>L4 – Shoulder<span id="L4_val" class="val">180</span></label>
+          <input type="range" id="L4" min="0"  max="180" value="180" oninput="updateServo('L4',this.value)">
+        </div>
+        <div class="servo-row">
+          <label>L5 – Fingers<span id="L5_val" class="val">90</span></label>
+          <input type="range" id="L5" min="90" max="180" value="90"  oninput="updateServo('L5',this.value)">
+        </div>
+        <div class="servo-row">
+          <label>L6 – Thumb<span id="L6_val" class="val">90</span></label>
+          <input type="range" id="L6" min="0"  max="90"  value="90"  oninput="updateServo('L6',this.value)">
+        </div>
+      </div>
+    </div>
+
+    <div id="hand-status" class="status-pill">Ready</div>
+  </section>
+
+  <!-- ══════  HEAD PANE  ══════ -->
+  <section id="pane-head" class="pane">
+
+    <div class="head-grid">
+
+      <!-- ── 360° Servo card ── -->
+      <div class="head-card">
+        <h2>&#x1F504; 360° Servo  <span class="chip">GPIO 17</span></h2>
+
+        <!-- Stop button -->
+        <button class="head-stop-btn" id="head-stop-btn" onclick="headCmd('stop')">
+          &#x23F9; STOP
+        </button>
+
+        <!-- CW row -->
+        <div class="head-row">
+          <span class="head-label">&#x21BB; Clockwise</span>
+          <input type="number" id="cw-ms" class="ms-input" value="1000" min="100" max="30000" step="100">
+          <span class="head-unit">ms</span>
+          <button class="action-btn blue" onclick="headCW()">GO</button>
+        </div>
+
+        <!-- CCW row -->
+        <div class="head-row">
+          <span class="head-label">&#x21BA; Counter-CW</span>
+          <input type="number" id="ccw-ms" class="ms-input" value="1000" min="100" max="30000" step="100">
+          <span class="head-unit">ms</span>
+          <button class="action-btn blue" onclick="headCCW()">GO</button>
+        </div>
+
+        <!-- Custom run -->
+        <div class="head-row">
+          <span class="head-label">&#x2699; Custom run</span>
+          <input type="number" id="run-val"  class="ms-input small" value="80"   min="0"   max="180">
+          <span class="head-unit">val</span>
+          <input type="number" id="run-ms"   class="ms-input"       value="1000" min="100" max="30000" step="100">
+          <span class="head-unit">ms</span>
+          <button class="action-btn orange" onclick="headRun()">GO</button>
+        </div>
+
+        <!-- Stop value calibration -->
+        <div class="head-divider"></div>
+        <div class="head-row">
+          <span class="head-label">&#x1F3AF; Stop value</span>
+          <input type="number" id="stop-val" class="ms-input small" value="90" min="0" max="180">
+          <button class="action-btn" style="background:#6366f1" onclick="headSetStop()">Set</button>
+        </div>
+        <p class="head-hint">If servo drifts at stop, try 88–95 until it fully stops.</p>
+      </div>
+
+      <!-- ── LED Strip card ── -->
+      <div class="head-card">
+        <h2>&#x1F4A1; LED Strip  <span class="chip">GPIO 4 · 84 LEDs</span></h2>
+
+        <!-- Color picker + presets -->
+        <div class="led-picker-row">
+          <input type="color" id="led-color-picker" value="#ffffff" oninput="ledPickerChange(this.value)" title="Pick color">
+          <div class="led-presets">
+            <button class="led-preset" style="background:#ff2020" onclick="ledPreset(255,32,32)"  title="Red"></button>
+            <button class="led-preset" style="background:#20ff20" onclick="ledPreset(32,255,32)"  title="Green"></button>
+            <button class="led-preset" style="background:#2060ff" onclick="ledPreset(32,96,255)"  title="Blue"></button>
+            <button class="led-preset" style="background:#ffffff" onclick="ledPreset(255,255,255)" title="White"></button>
+            <button class="led-preset" style="background:#ff8800" onclick="ledPreset(255,136,0)"  title="Orange"></button>
+            <button class="led-preset" style="background:#cc00ff" onclick="ledPreset(200,0,255)"  title="Purple"></button>
+            <button class="led-preset" style="background:#00ffff" onclick="ledPreset(0,255,255)"  title="Cyan"></button>
+            <button class="led-preset" style="background:#ffff00" onclick="ledPreset(255,255,0)"  title="Yellow"></button>
+          </div>
+        </div>
+
+        <!-- RGB readout -->
+        <div class="rgb-readout">
+          R <span id="led-r">255</span> &nbsp;
+          G <span id="led-g">255</span> &nbsp;
+          B <span id="led-b">255</span>
+        </div>
+
+        <!-- LED action buttons -->
+        <div class="action-strip" style="justify-content:flex-start; gap:8px; flex-wrap:wrap;">
+          <button class="action-btn blue"   id="led-send-btn" onclick="ledSend()">&#x1F4E4; Send Color</button>
+          <button class="action-btn orange" onclick="headCmd('rainbow')">&#x1F308; Rainbow</button>
+          <button class="action-btn red"    onclick="headCmd('off')">&#x26AB; Off</button>
+        </div>
+
+        <!-- Brightness slider -->
+        <div class="head-divider"></div>
+        <div class="servo-row">
+          <label>Brightness <span id="bright-val" class="val">120</span></label>
+          <input type="range" id="bright-slider" min="0" max="255" value="120"
+                 oninput="updateBrightness(this.value)">
+        </div>
+      </div>
+
+    </div><!-- /head-grid -->
+
+    <!-- Serial log for head -->
+    <div class="head-log" id="head-log">
+      <div class="head-log-title">&#x1F4BB; Serial Response</div>
+      <div id="head-log-text">—</div>
+    </div>
+
+    <div id="head-status" class="status-pill">Ready</div>
+  </section>
+
+</div><!-- /shell -->
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

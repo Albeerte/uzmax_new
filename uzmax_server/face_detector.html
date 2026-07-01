@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Human Sales Agent — Full HUD</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root { color-scheme: dark light; }
+    body { margin:0; background:#0b0c10; color:#e5e7eb; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    header { padding:12px 16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; background:#111827; position:sticky; top:0; z-index:2; }
+    label { display:inline-flex; gap:6px; align-items:center; font-size:14px; }
+    select,input[type=range],button { padding:6px 10px; border-radius:10px; border:1px solid #374151; background:#0f172a; color:#e5e7eb; }
+    button { cursor:pointer; }
+    main { display:grid; grid-template-columns: 1fr 360px; gap:14px; padding:14px; }
+    video,canvas { width:100%; border-radius:14px; background:#111827; }
+    .card { background:#111827; border:1px solid #374151; border-radius:14px; padding:12px; }
+    .hud { position:absolute; top:12px; left:12px; background:rgba(0,0,0,.55); padding:8px 10px; border-radius:10px; font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; line-height: 1.35; pointer-events:none; white-space:pre; }
+    .wrap { position:relative; }
+    .stat { display:inline-block; padding:4px 8px; background:#1f2937; border-radius:10px; font-size:12px; }
+    .ok { color:#22c55e } .bad { color:#f87171 } .warn { color:#eab308 }
+    .log { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; white-space:pre-wrap; max-height:260px; overflow:auto; }
+  </style>
+</head>
+<body>
+<header>
+  <label>Camera:
+    <select id="camera"></select>
+  </label>
+  <label>Resolution:
+    <select id="res">
+      <option value="640">640×480</option>
+      <option value="960">960×540</option>
+      <option value="1280">1280×720</option>
+    </select>
+  </label>
+  <label>Infer every:
+    <select id="interval">
+      <option value="0">each frame</option>
+      <option value="50">50 ms</option>
+      <option value="100" selected>100 ms</option>
+      <option value="200">200 ms</option>
+      <option value="400">400 ms</option>
+    </select>
+  </label>
+  <label>Score ≥ <span id="thrVal">0.55</span>
+    <input id="thr" type="range" min="0.3" max="0.9" step="0.05" value="0.55" />
+  </label>
+  <button id="start">Start</button>
+  <span class="stat">FPS: <b id="fps">–</b></span>
+  <span class="stat">Persons: <b id="cnt">0</b></span>
+</header>
+
+<main>
+  <div class="wrap">
+    <video id="v" autoplay playsinline muted></video>
+    <canvas id="c"></canvas>
+    <div id="hud" class="hud">—</div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <strong>Sales Agent</strong>
+      <label>Voice:
+        <select id="voice"></select>
+      </label>
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px">
+      <label><input type="checkbox" id="speakOnDetect" checked /> Speak on first person detect</label>
+      <label><input type="checkbox" id="drawAll" checked /> Human.draw all overlays</label>
+      <label><input type="checkbox" id="enableBody" /> Body pose</label>
+      <label><input type="checkbox" id="enableHands" /> Hands</label>
+      <label><input type="checkbox" id="enableObjects" checked /> Objects</label>
+    </div>
+
+    <details class="card" style="background:#0f172a" open>
+      <summary>Phrases</summary>
+      <label style="display:block;margin-top:8px">Greeting:
+        <textarea id="phrase_greet" rows="2" style="width:100%;border-radius:8px;padding:8px;border:1px solid #374151;background:#0b1220;color:#e5e7eb">Здравствуйте! Чем могу помочь? У нас есть акции и персональные рекомендации.</textarea>
+      </label>
+      <label style="display:block;margin-top:8px">Happy:
+        <textarea id="phrase_happy" rows="2" style="width:100%;border-radius:8px;padding:8px;border:1px solid #374151;background:#0b1220;color:#e5e7eb">Вижу у вас отличное настроение! Рассказать про хитовые предложения?</textarea>
+      </label>
+      <label style="display:block;margin-top:8px">Neutral:
+        <textarea id="phrase_neutral" rows="2" style="width:100%;border-radius:8px;padding:8px;border:1px solid #374151;background:#0b1220;color:#e5e7eb">Если хотите, кратко расскажу, что сегодня чаще всего выбирают.</textarea>
+      </label>
+      <label style="display:block;margin-top:8px">Sad:
+        <textarea id="phrase_sad" rows="2" style="width:100%;border-radius:8px;padding:8px;border:1px solid #374151;background:#0b1220;color:#e5e7eb">Кажется, день выдался непростой. Давайте помогу подобрать самое удобное и выгодное.</textarea>
+      </label>
+    </details>
+
+    <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap">
+      <button id="say">Say test phrase</button>
+      <button id="reset">Reset session</button>
+      <div class="stat">Person: <b id="pStat" class="bad">no</b></div>
+      <div class="stat">Face: <b id="fStat" class="bad">no</b></div>
+      <div class="stat">Emotion: <b id="eStat">–</b></div>
+    </div>
+
+    <h4 style="margin:12px 0 6px">Log</h4>
+    <div id="log" class="log"></div>
+  </div>
+</main>
+
+<script type="module">
+  import Human from 'https://cdn.jsdelivr.net/npm/@vladmandic/human/dist/human.esm.js';
+
+  // DOM
+  const els = {
+    v: document.getElementById('v'),
+    c: document.getElementById('c'),
+    ctx: null,
+    hud: document.getElementById('hud'),
+    camera: document.getElementById('camera'),
+    res: document.getElementById('res'),
+    thr: document.getElementById('thr'),
+    thrVal: document.getElementById('thrVal'),
+    interval: document.getElementById('interval'),
+    start: document.getElementById('start'),
+    fps: document.getElementById('fps'),
+    cnt: document.getElementById('cnt'),
+    pStat: document.getElementById('pStat'),
+    fStat: document.getElementById('fStat'),
+    eStat: document.getElementById('eStat'),
+    voice: document.getElementById('voice'),
+    speakOnDetect: document.getElementById('speakOnDetect'),
+    drawAll: document.getElementById('drawAll'),
+    enableBody: document.getElementById('enableBody'),
+    enableHands: document.getElementById('enableHands'),
+    enableObjects: document.getElementById('enableObjects'),
+    say: document.getElementById('say'),
+    reset: document.getElementById('reset'),
+    phrase_greet: document.getElementById('phrase_greet'),
+    phrase_happy: document.getElementById('phrase_happy'),
+    phrase_neutral: document.getElementById('phrase_neutral'),
+    phrase_sad: document.getElementById('phrase_sad'),
+    log: document.getElementById('log'),
+  };
+  els.ctx = els.c.getContext('2d');
+
+  // Human config — включаем максимум лицевых модулей + объекты
+  let human = null;
+  const baseConfig = () => ({
+    backend: 'webgl', // можно 'webgpu' в новых Chrome
+    modelBasePath: 'https://vladmandic.github.io/human-models/models/',
+    filter: { enabled: true, equalization: false, flip: false },
+    // лицевые фичи “как в демо”
+    face: {
+      enabled: true,
+      detector: { rotation: false, maxDetected: 1, minConfidence: 0.5 },
+      mesh: { enabled: true },
+      attention: { enabled: false },
+      iris: { enabled: true },
+      description: { enabled: true },
+      emotion: { enabled: true },
+      antispoof: { enabled: true },
+      liveness: { enabled: true },
+    },
+    body: { enabled: false },
+    hand: { enabled: false },
+    object: { enabled: true, return: true, minConfidence: 0.55 },
+    segmentation: { enabled: false },
+    gesture: { enabled: true },
+    debug: false,
+  });
+
+  // State
+  let stream, lastInfer = 0, inferInterval = 100;
+  let fpsCounter = 0, lastTick = performance.now();
+  let greeted = false;
+  let lastEmotion = null;
+
+  const log = (...a) => { els.log.textContent = `[${new Date().toLocaleTimeString()}] ${a.join(' ')}\n` + els.log.textContent; };
+
+  // Camera helpers
+  async function listCameras() {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cams = devices.filter(d => d.kind === 'videoinput');
+    els.camera.innerHTML = '';
+    for (const cam of cams) {
+      const opt = document.createElement('option');
+      opt.value = cam.deviceId; opt.textContent = cam.label || `Camera ${els.camera.length+1}`;
+      els.camera.appendChild(opt);
+    }
+  }
+
+  async function startCamera() {
+    const width = parseInt(els.res.value, 10);
+    const height = Math.round(width * 3/4);
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { deviceId: els.camera.value || undefined, width, height, frameRate: { ideal: 30, max: 60 }, facingMode: 'user' },
+      audio: false
+    });
+    els.v.srcObject = stream; await els.v.play();
+    log('Camera started', `${width}x${height}`);
+  }
+
+  // Speech Synthesis
+  let voices = [];
+  function populateVoices() {
+    voices = speechSynthesis.getVoices();
+    els.voice.innerHTML = '';
+    for (const v of voices) {
+      if (/ru|en|uz/i.test(v.lang)) {
+        const opt = document.createElement('option');
+        opt.value = v.name; opt.textContent = `${v.name} (${v.lang})`;
+        els.voice.appendChild(opt);
+      }
+    }
+  }
+  populateVoices();
+  window.speechSynthesis.onvoiceschanged = populateVoices;
+
+  function say(text) {
+    if (!text?.trim()) return;
+    const u = new SpeechSynthesisUtterance(text);
+    const chosen = voices.find(v => v.name === els.voice.value);
+    if (chosen) u.voice = chosen;
+    u.rate = 1.0; u.pitch = 1.0; u.volume = 1.0;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+    log('TTS:', text);
+  }
+
+  // Drawing helpers
+  function drawBox(x, y, w, h, label) {
+    els.ctx.lineWidth = 3; els.ctx.strokeStyle = '#22c55e'; els.ctx.fillStyle = '#22c55e';
+    els.ctx.strokeRect(x, y, w, h);
+    if (label) { els.ctx.font = '14px system-ui'; els.ctx.fillText(label, x + 6, y + 18); }
+  }
+
+  // HUD: собираем краткую сводку «в уголке»
+  function updateHUD(face, persons) {
+    const lines = [];
+    lines.push(`persons: ${persons.length}`);
+    if (face) {
+      const g = face.gender ?? '—';
+      const gs = face.genderScore != null ? face.genderScore.toFixed(2) : '—';
+      const age = face.age != null ? Math.round(face.age) : '—';
+      const dist = face.distance != null ? face.distance.toFixed(2) : '—';
+      const live = face.live != null ? face.live.toFixed(2) : '—';
+      const real = face.real != null ? face.real.toFixed(2) : '—';
+      let emo = '—';
+      if (Array.isArray(face.emotion) && face.emotion.length) {
+        const best = [...face.emotion].sort((a,b)=>b.score-a.score)[0];
+        emo = `${best.emotion} (${best.score.toFixed(2)})`;
+      }
+      let rot = '—';
+      if (face.rotation?.angle) {
+        const { yaw, pitch, roll } = face.rotation.angle;
+        rot = `yaw:${yaw.toFixed(1)} pitch:${pitch.toFixed(1)} roll:${roll.toFixed(1)}`;
+      }
+      let gaze = '—';
+      if (face.rotation?.gaze) {
+        const { bearing, strength } = face.rotation.gaze;
+        gaze = `bearing:${bearing.toFixed(1)}° strength:${strength.toFixed(2)}`;
+      }
+      lines.push(`gender: ${g} (${gs})`);
+      lines.push(`age: ${age}`);
+      lines.push(`distance: ${dist}`);
+      lines.push(`emotion: ${emo}`);
+      lines.push(`liveness: ${live}  real(antispoof): ${real}`);
+      lines.push(`rotation: ${rot}`);
+      lines.push(`gaze: ${gaze}`);
+    } else {
+      lines.push('face: —');
+    }
+    els.hud.textContent = lines.join('\n');
+  }
+
+  // Main detect loop
+  async function detectLoop(now = performance.now()) {
+    els.c.width = els.v.videoWidth || 640;
+    els.c.height = els.v.videoHeight || 480;
+
+    // ограничим частоту
+    if (now - lastInfer >= inferInterval) {
+      lastInfer = now;
+
+      // используем human.image + filters и human.detect
+      await human.detect(els.v);
+      const res = human.result || {};
+
+      // опционально рисуем все оверлеи как в демо
+      if (els.drawAll.checked) {
+        const processed = await human.image(els.v);
+        human.draw.canvas(processed.canvas, els.c);
+        await human.draw.all(els.c, human.next(res), { bodyLabels: 'pose + keypoints' });
+      } else {
+        // вручную перерисовываем фрейм
+        const ctx = els.ctx; ctx.drawImage(els.v, 0, 0, els.c.width, els.c.height);
+      }
+
+      // Persons
+      const persons = (res.object || []).filter(o => o.label === 'person' && o.score >= parseFloat(els.thr.value));
+      els.cnt.textContent = persons.length;
+      els.pStat.textContent = persons.length ? 'yes' : 'no';
+      els.pStat.className = persons.length ? 'ok' : 'bad';
+
+      // Face & emotion etc.
+      const face = (res.face || [])[0];
+      const hasFace = Boolean(face?.box);
+      els.fStat.textContent = hasFace ? 'yes' : 'no';
+      els.fStat.className = hasFace ? 'ok' : 'bad';
+
+      let topEmotion = null;
+      if (hasFace && Array.isArray(face.emotion) && face.emotion.length) {
+        topEmotion = [...face.emotion].sort((a,b)=>b.score-a.score)[0]?.emotion;
+        els.eStat.textContent = topEmotion || '–';
+      } else {
+        els.eStat.textContent = '–';
+      }
+
+      // HUD
+      updateHUD(face, persons);
+
+      // простая логика «агента»
+      if (persons.length && !greeted && els.speakOnDetect.checked) {
+        greeted = true;
+        say(els.phrase_greet.value);
+      }
+      if (greeted && topEmotion && topEmotion !== lastEmotion) {
+        lastEmotion = topEmotion;
+        if (topEmotion === 'happy') say(els.phrase_happy.value);
+        else if (topEmotion === 'sad') say(els.phrase_sad.value);
+        else say(els.phrase_neutral.value);
+      }
+    }
+
+    // FPS
+    fpsCounter++;
+    const dt = now - lastTick;
+    if (dt >= 1000) { els.fps.textContent = String(fpsCounter); fpsCounter = 0; lastTick = now; }
+
+    requestAnimationFrame(detectLoop);
+  }
+
+  // UI
+  els.thr.oninput = () => els.thrVal.textContent = parseFloat(els.thr.value).toFixed(2);
+  els.interval.onchange = () => inferInterval = parseInt(els.interval.value, 10);
+  els.res.onchange = startCamera;
+  els.camera.onchange = startCamera;
+  els.say.onclick = () => say(els.phrase_neutral.value);
+  els.reset.onclick = () => { greeted = false; lastEmotion = null; log('Session reset'); };
+
+  // toggles for big modules
+  for (const id of ['enableBody','enableHands','enableObjects']) {
+    document.getElementById(id).addEventListener('change', async () => {
+      const cfg = baseConfig();
+      cfg.body.enabled = els.enableBody.checked;
+      cfg.hand.enabled = els.enableHands.checked;
+      cfg.object.enabled = els.enableObjects.checked;
+      human = new Human(cfg);
+      await human.load();
+      log('Reloaded Human config:', JSON.stringify({body:cfg.body.enabled, hand:cfg.hand.enabled, object:cfg.object.enabled}));
+    });
+  }
+
+  // boot
+  els.start.onclick = async () => {
+    await listCameras();
+    await startCamera();
+    human = new Human(baseConfig());
+    await human.load();
+    inferInterval = parseInt(els.interval.value, 10);
+    detectLoop();
+    els.start.disabled = true;
+  };
+
+  // pre-permission to reveal camera labels for menu
+  navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+    .then(s => { s.getTracks().forEach(t=>t.stop()); return listCameras(); })
+    .catch(()=>{ /* ignore */ });
+</script>
+</body>
+</html>

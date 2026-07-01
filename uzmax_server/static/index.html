@@ -1,0 +1,3782 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UzMAX — Medical AI + Robot Control</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    /* ════════════════════════════════════════════════════════
+       LIGHT THEME TOKENS
+    ════════════════════════════════════════════════════════ */
+    :root {
+      --bg:       #f0f4f8;
+      --surface:  #ffffff;
+      --card:     #ffffff;
+      --card2:    #f8fafc;
+      --border:   #e2e8f0;
+      --border2:  #cbd5e1;
+      --brand:    #0284c7;
+      --brand-lt: #e0f2fe;
+      --brand2:   #7c3aed;
+      --green:    #16a34a;
+      --green-lt: #dcfce7;
+      --orange:   #ea580c;
+      --orange-lt:#fff7ed;
+      --red:      #dc2626;
+      --red-lt:   #fee2e2;
+      --yellow:   #ca8a04;
+      --text:     #0f172a;
+      --text2:    #334155;
+      --muted:    #64748b;
+      --muted-lt: #f1f5f9;
+      --shadow:   0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+      --shadow-md:0 4px 24px rgba(0,0,0,.10);
+      --r:        14px;
+    }
+
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{
+      font-family:'Inter',sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      min-height:100vh;
+    }
+
+    /* ── TOP NAV ───────────────────────────────────────────── */
+    nav{
+      position:sticky;top:0;z-index:200;
+      background:var(--surface);
+      border-bottom:1px solid var(--border);
+      padding:0 22px;
+      display:flex;align-items:center;
+      height:56px;gap:0;
+      box-shadow:0 1px 4px rgba(0,0,0,.06);
+    }
+    .nav-logo{
+      display:flex;align-items:center;gap:9px;
+      font-size:1.1rem;font-weight:800;letter-spacing:-.03em;
+      color:var(--text);margin-right:24px;
+    }
+    .nav-logo-dot{
+      width:32px;height:32px;border-radius:9px;
+      background:linear-gradient(135deg,var(--brand),var(--brand2));
+      display:flex;align-items:center;justify-content:center;font-size:16px;
+    }
+    .page-tabs{display:flex;gap:2px;flex:1;}
+    .page-tab{
+      padding:6px 18px;
+      border:none;border-radius:8px;
+      background:transparent;color:var(--muted);
+      font-family:inherit;font-size:.86rem;font-weight:600;
+      cursor:pointer;transition:all .13s ease;
+      display:flex;align-items:center;gap:6px;
+    }
+    .page-tab:hover{background:var(--muted-lt);color:var(--text2);}
+    .page-tab.active{
+      background:var(--brand-lt);
+      color:var(--brand);
+    }
+    .tab-dot{width:7px;height:7px;border-radius:50%;background:var(--border2);flex-shrink:0;}
+    .tab-dot.online{background:var(--green);box-shadow:0 0 5px var(--green);}
+    .nav-right{margin-left:auto;display:flex;align-items:center;gap:8px;}
+    .ws-pill{
+      display:flex;align-items:center;gap:6px;
+      padding:4px 12px;border-radius:999px;
+      border:1px solid var(--border);
+      background:var(--muted-lt);
+      font-size:.73rem;font-weight:600;color:var(--muted);
+    }
+    .ws-pill.online{
+      border-color:#bbf7d0;background:#f0fdf4;color:var(--green);
+    }
+    .ws-dot{width:7px;height:7px;border-radius:50%;background:var(--border2);}
+    .ws-dot.online{background:var(--green);}
+    .full-btn{
+      width:34px;height:34px;border-radius:9px;
+      border:1px solid var(--border);
+      background:var(--surface);
+      color:var(--muted);
+      display:flex;align-items:center;justify-content:center;
+      cursor:pointer;transition:all .13s ease;
+    }
+    .full-btn:hover{background:var(--brand-lt);border-color:var(--brand);color:var(--brand);}
+    .full-btn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+    body.full-view{
+      overflow:hidden;
+      background:var(--surface);
+    }
+    body.full-view nav{
+      position:fixed;left:0;right:0;top:0;
+    }
+    body.full-view .page.active{
+      height:calc(100vh - 56px);
+      overflow:auto;
+      padding:14px;
+      margin-top:56px;
+    }
+    body.full-view .g3{
+      grid-template-columns:minmax(320px, .9fr) minmax(420px, 1.35fr) minmax(280px, .8fr);
+      height:100%;
+    }
+    body.full-view #chat-box{height:calc(100vh - 316px);min-height:260px;}
+    body.full-view .cam-stage{min-height:360px;}
+    body.full-view .cam-stage video{height:100%;object-fit:cover;}
+
+    /* ── PAGES ─────────────────────────────────────────────── */
+    .page{display:none;padding:20px;animation:fadeUp .18s ease;}
+    .page.active{display:block;}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+    /* ── GRIDS ─────────────────────────────────────────────── */
+    .g3{display:grid;grid-template-columns:340px 1fr 290px;gap:16px;align-items:start;}
+    .g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
+    .col{display:flex;flex-direction:column;gap:14px;}
+
+    /* ── CARD ──────────────────────────────────────────────── */
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:var(--r);
+      overflow:hidden;
+      box-shadow:var(--shadow);
+    }
+    .card-head{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:12px 16px 10px;
+      border-bottom:1px solid var(--border);
+      background:var(--card2);
+    }
+    .card-title{
+      font-size:.72rem;font-weight:700;
+      text-transform:uppercase;letter-spacing:.07em;
+      color:var(--muted);
+    }
+    .card-body{padding:14px 16px;}
+
+    /* ── BADGES ────────────────────────────────────────────── */
+    .badge{
+      display:inline-flex;align-items:center;gap:4px;
+      padding:3px 9px;border-radius:999px;
+      font-size:.7rem;font-weight:700;
+    }
+    .b-green {background:var(--green-lt); color:var(--green);}
+    .b-blue  {background:var(--brand-lt); color:var(--brand);}
+    .b-muted {background:var(--muted-lt); color:var(--muted);}
+    .b-red   {background:var(--red-lt);   color:var(--red);}
+    .b-orange{background:var(--orange-lt);color:var(--orange);}
+
+    /* ── STATUS DOT ────────────────────────────────────────── */
+    .s-dot{width:8px;height:8px;border-radius:50%;background:var(--border2);flex-shrink:0;}
+    .s-dot.on{background:var(--green);box-shadow:0 0 6px #4ade8088;}
+    .s-dot.off{background:var(--red);}
+
+    /* ── BUTTONS ───────────────────────────────────────────── */
+    .btn{
+      padding:8px 14px;border:none;border-radius:8px;
+      font-family:inherit;font-size:.83rem;font-weight:600;
+      cursor:pointer;transition:all .12s;
+      display:inline-flex;align-items:center;gap:6px;
+    }
+    .btn:hover{filter:brightness(.94);transform:translateY(-1px);}
+    .btn:active{transform:scale(.97);}
+    .btn-blue  {background:var(--brand);color:#fff;}
+    .btn-green {background:var(--green);color:#fff;}
+    .btn-orange{background:var(--orange);color:#fff;}
+    .btn-red   {background:var(--red);color:#fff;}
+    .btn-purple{background:var(--brand2);color:#fff;}
+    .btn-ghost {
+      background:var(--muted-lt);border:1px solid var(--border2);color:var(--text2);
+    }
+    .btn-sm{padding:5px 11px;font-size:.77rem;}
+
+    /* ── PORT CARD ─────────────────────────────────────────── */
+    .port-card{
+      background:var(--card2);border:1px solid var(--border);border-radius:10px;
+      padding:12px 14px;display:flex;flex-direction:column;gap:9px;
+    }
+    .port-card-row{display:flex;align-items:center;gap:10px;}
+    .port-icon{font-size:20px;}
+    .port-title{font-size:.88rem;font-weight:700;color:var(--text);}
+    .port-lbl  {font-size:.71rem;color:var(--muted);margin-top:1px;}
+    select.psel{
+      flex:1;padding:7px 9px;border-radius:7px;
+      background:var(--surface);border:1px solid var(--border2);
+      color:var(--text);font-family:inherit;font-size:.8rem;outline:none;
+    }
+    select.psel:focus{border-color:var(--brand);}
+    .port-acts{display:flex;gap:7px;}
+    .port-err{font-size:.73rem;color:var(--red);}
+    .port-err:empty{display:none;}
+
+    /* ── D-PAD ─────────────────────────────────────────────── */
+    .dpad{
+      display:grid;
+      grid-template-columns:repeat(3,66px);
+      grid-template-rows:repeat(3,66px);
+      gap:7px;justify-content:center;padding:14px;
+    }
+    .dp{
+      width:66px;height:66px;border-radius:12px;border:none;
+      background:var(--muted-lt);border:1px solid var(--border2);
+      color:var(--text2);font-size:20px;cursor:pointer;
+      transition:all .11s;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .dp:hover{background:var(--brand-lt);border-color:var(--brand);color:var(--brand);}
+    .dp:active{transform:scale(.93);background:var(--brand);color:#fff;border-color:var(--brand);}
+    .dp-stop{background:var(--red-lt);border-color:#fca5a5;color:var(--red);}
+    .dp-stop:hover{background:var(--red);border-color:var(--red);color:#fff;}
+    .dp-empty{pointer-events:none;}
+
+    /* ── SERVO SLIDERS ─────────────────────────────────────── */
+    .srv-grid{
+      display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:12px;padding:12px 16px;
+    }
+    .srv-row{display:flex;align-items:center;gap:10px;}
+    .srv-lbl{font-size:.74rem;width:124px;flex-shrink:0;color:var(--muted);font-weight:500;}
+    .srv-limit{display:block;font-size:.65rem;color:var(--muted);font-weight:600;margin-top:1px;}
+    .srv-row input[type=range]{flex:1;accent-color:var(--brand);height:4px;}
+    .srv-val{font-size:.79rem;font-weight:700;width:28px;text-align:right;color:var(--text2);}
+    .head-gauge{
+      position:relative;
+      width:min(100%,280px);
+      height:128px;
+      margin:0 auto 12px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      background:#fff;
+      overflow:hidden;
+      touch-action:none;
+      cursor:pointer;
+    }
+    .head-gauge svg{display:block;width:100%;height:100%;}
+    .head-gauge .arc{fill:none;stroke:#94a3b8;stroke-width:1.2;}
+    .head-gauge .tick{stroke:#a855f7;stroke-width:1.4;stroke-linecap:round;}
+    .head-gauge .tick-major{stroke-width:1.7;}
+    .head-gauge .tick-label{
+      fill:#7c3aed;
+      font-size:9px;
+      font-weight:800;
+      text-anchor:middle;
+      dominant-baseline:middle;
+      user-select:none;
+    }
+    .head-gauge .needle{
+      stroke:#0284c7;
+      stroke-width:4;
+      stroke-linecap:round;
+      filter:drop-shadow(0 1px 1px rgba(2,132,199,.25));
+    }
+    .head-gauge .needle-dot{fill:#2563eb;stroke:#fff;stroke-width:2;}
+    .head-gauge .pivot{fill:#fff;stroke:#ef4444;stroke-width:2;}
+    .head-gauge .baseline{stroke:#cbd5e1;stroke-width:1.4;}
+    .head-gauge-value{
+      position:absolute;
+      left:50%;
+      top:48px;
+      transform:translateX(-50%);
+      padding:2px 8px;
+      border-radius:999px;
+      background:#eff6ff;
+      color:#0369a1;
+      border:1px solid #bfdbfe;
+      font-size:.78rem;
+      font-weight:900;
+      pointer-events:none;
+    }
+    .hand-row{
+      display:flex;flex-direction:column;gap:6px;
+      min-width:0;padding:8px;border:1px solid var(--border);
+      border-radius:10px;background:var(--card2);
+    }
+    .hand-meta{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;}
+    .hand-meta .srv-lbl{width:auto;}
+    .hand-degree{
+      min-width:48px;text-align:right;
+      font-size:.9rem;font-weight:900;color:var(--brand);
+      padding:2px 8px;border-radius:8px;background:var(--brand-lt);
+      border:1px solid #bae6fd;
+    }
+    .hand-row input[type=range]{width:100%;accent-color:var(--brand);height:4px;}
+    .hand-ticks{
+      display:flex;justify-content:space-between;gap:2px;
+      font-size:.56rem;font-weight:700;line-height:1;
+      color:var(--muted);user-select:none;padding:0 1px;
+    }
+    .hand-ticks span{min-width:0;text-align:center;}
+    .hand-protractor{
+      width:100%;height:112px;border:1px solid var(--border);
+      border-radius:10px;background:#fff;overflow:hidden;cursor:pointer;
+      touch-action:none;
+    }
+    .hand-protractor svg{width:100%;height:100%;display:block;}
+    .pro-base{stroke:#94a3b8;stroke-width:1.4;}
+    .pro-arc{fill:none;stroke:#c084fc;stroke-width:1.2;}
+    .pro-range{fill:none;stroke:var(--green);stroke-width:4;stroke-linecap:round;}
+    .pro-tick{stroke:#9333ea;stroke-width:.8;}
+    .pro-tick.dim{stroke:#cbd5e1;}
+    .pro-label{font-size:7px;font-weight:800;fill:#7e22ce;text-anchor:middle;dominant-baseline:middle;}
+    .pro-label.dim{fill:#94a3b8;}
+    .pro-needle{stroke:#0284c7;stroke-width:4;stroke-linecap:round;}
+    .pro-dot{fill:#0284c7;stroke:#fff;stroke-width:2;}
+    .pro-center{fill:#fff;stroke:#ef4444;stroke-width:1.5;}
+    @media (max-width: 980px){.srv-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+    @media (max-width: 620px){.srv-grid{grid-template-columns:1fr;}}
+
+    /* ── VOICE HERO ────────────────────────────────────────── */
+    .voice-hero{
+      position:relative;border-radius:16px;overflow:hidden;
+      background:linear-gradient(145deg,#e0f2fe,#dbeafe,#ede9fe);
+      min-height:130px;border:1px solid #bae6fd;
+    }
+    .voice-orb{
+      position:absolute;inset:50%;
+      transform:translate(-50%,-50%);
+      width:80px;height:80px;border-radius:50%;
+      background:radial-gradient(circle,rgba(255,255,255,.9),rgba(56,189,248,.5) 55%,transparent 75%);
+      filter:blur(1px);
+      animation:breathe 3.5s ease-in-out infinite;
+    }
+    .voice-ring{
+      position:absolute;inset:50%;
+      transform:translate(-50%,-50%);
+      width:160px;height:160px;border-radius:50%;
+      border:2px solid rgba(14,165,233,.25);
+      animation:ring 3s ease-out infinite;
+    }
+    @keyframes breathe{
+      0%,100%{transform:translate(-50%,-50%) scale(.88);opacity:.7}
+      50%{transform:translate(-50%,-50%) scale(1.12);opacity:1}
+    }
+    @keyframes ring{
+      0%{transform:translate(-50%,-50%) scale(.7);opacity:.8}
+      100%{transform:translate(-50%,-50%) scale(1.2);opacity:0}
+    }
+    .voice-bars{
+      position:absolute;left:20px;right:20px;bottom:16px;
+      height:32px;display:flex;align-items:flex-end;justify-content:center;gap:5px;
+    }
+    .voice-bars span{
+      width:5px;border-radius:999px;
+      background:linear-gradient(180deg,#0ea5e9,#7c3aed);
+      animation:vwave 1.1s ease-in-out infinite;
+      transform-origin:bottom;
+    }
+    .voice-bars span:nth-child(1){height:12px;animation-delay:0s}
+    .voice-bars span:nth-child(2){height:22px;animation-delay:.08s}
+    .voice-bars span:nth-child(3){height:28px;animation-delay:.16s}
+    .voice-bars span:nth-child(4){height:16px;animation-delay:.24s}
+    .voice-bars span:nth-child(5){height:30px;animation-delay:.32s}
+    .voice-bars span:nth-child(6){height:20px;animation-delay:.4s}
+    .voice-bars span:nth-child(7){height:24px;animation-delay:.48s}
+    @keyframes vwave{
+      0%,100%{transform:scaleY(.55);opacity:.5}
+      50%{transform:scaleY(1.4);opacity:1}
+    }
+
+    /* ── MIC BUTTON ────────────────────────────────────────── */
+    #mic-btn{
+      width:58px;height:58px;border:none;border-radius:50%;
+      cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(150deg,#ff7961,#dc2626);
+      box-shadow:0 8px 20px rgba(220,38,38,.28);
+      transition:all .15s;flex-shrink:0;
+    }
+    #mic-btn:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(220,38,38,.36);}
+    #mic-btn:active{transform:scale(.95);}
+    #mic-btn svg{width:20px;height:20px;fill:#fff;}
+    #mic-btn.listening{
+      background:linear-gradient(150deg,#4ade80,#16a34a);
+      box-shadow:0 8px 20px rgba(22,163,74,.3);
+    }
+    #mic-btn.speaking{
+      background:linear-gradient(150deg,#60a5fa,#0284c7);
+      box-shadow:0 8px 20px rgba(2,132,199,.3);
+    }
+
+    /* ── CHAT ──────────────────────────────────────────────── */
+    #chat-box{
+      max-height:300px;overflow-y:auto;
+      display:flex;flex-direction:column;gap:9px;
+      padding:12px 14px;scroll-behavior:smooth;
+    }
+    .msg{
+      max-width:82%;padding:10px 13px;border-radius:16px;
+      font-size:.88rem;line-height:1.5;word-wrap:break-word;
+    }
+    .msg-ai{
+      align-self:flex-start;
+      background:var(--muted-lt);color:var(--text);
+      border-bottom-left-radius:4px;
+      border:1px solid var(--border);
+    }
+    .msg-user{
+      align-self:flex-end;
+      background:linear-gradient(135deg,var(--brand),#0369a1);
+      color:#fff;border-bottom-right-radius:4px;
+    }
+    .chat-compose{
+      display:grid;grid-template-columns:1fr auto;gap:8px;
+      padding:0 14px 14px;
+    }
+    .chat-compose .inp{height:38px;}
+
+    /* ── CAMERA STAGE ──────────────────────────────────────── */
+    .cam-stage{
+      position:relative;width:100%;background:#1e293b;
+      aspect-ratio:4/3;overflow:hidden;border-radius:0;
+    }
+    #face-video,#face-canvas{
+      width:100%;height:100%;object-fit:cover;
+      position:absolute;inset:0;display:block;
+    }
+    #face-video{transform:scaleX(-1);}
+    #face-canvas{transform:scaleX(-1);background:transparent;pointer-events:none;}
+    .cam-live-badge{
+      position:absolute;top:10px;left:10px;
+      padding:4px 10px;border-radius:999px;
+      background:rgba(0,0,0,.55);backdrop-filter:blur(6px);
+      font-size:.7rem;font-weight:700;color:#4ade80;
+      border:1px solid rgba(74,222,128,.35);
+    }
+
+    /* ── PERSON ROW ────────────────────────────────────────── */
+    .person-row{
+      display:flex;align-items:center;gap:12px;
+      padding:12px 14px;
+      background:linear-gradient(135deg,#eff6ff,#f5f3ff);
+      border-bottom:1px solid var(--border);
+    }
+    .p-avatar{
+      width:44px;height:44px;border-radius:50%;flex-shrink:0;
+      background:linear-gradient(135deg,var(--brand),var(--brand2));
+      display:flex;align-items:center;justify-content:center;font-size:20px;
+      border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.12);
+    }
+    .p-name{font-size:.97rem;font-weight:800;color:var(--text);}
+    .p-sub {font-size:.73rem;color:var(--muted);margin-top:2px;}
+
+    /* ── THERMAL CAMERA ────────────────────────────────────── */
+    #thermal-canvas{
+      width:100%;aspect-ratio:32/24;
+      border-radius:0;display:block;
+      image-rendering:pixelated;
+    }
+    .thermal-stats{
+      display:grid;grid-template-columns:repeat(4,1fr);
+      gap:0;
+    }
+    .t-stat{
+      text-align:center;padding:10px 4px;
+      border-right:1px solid var(--border);
+    }
+    .t-stat:last-child{border-right:none;}
+    .t-val{font-size:1.2rem;font-weight:800;color:var(--text);}
+    .t-key{font-size:.68rem;color:var(--muted);margin-top:2px;font-weight:500;}
+    .t-val.hot{color:var(--red);}
+    .t-val.warm{color:var(--orange);}
+    .t-val.cold{color:var(--brand);}
+    .thermal-off{
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:28px;text-align:center;color:var(--muted);gap:8px;
+      background:var(--muted-lt);
+    }
+    .thermal-off span{font-size:32px;}
+    .thermal-off p{font-size:.82rem;line-height:1.5;}
+
+    /* ── LED SWATCHES ──────────────────────────────────────── */
+    .led-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+    .led-sw{
+      width:32px;height:32px;border-radius:8px;cursor:pointer;
+      border:2px solid rgba(0,0,0,.08);
+      transition:transform .12s,box-shadow .12s;
+    }
+    .led-sw:hover{transform:scale(1.14);box-shadow:0 4px 12px rgba(0,0,0,.15);}
+
+    /* ── TOGGLE ────────────────────────────────────────────── */
+    .tgl-group{display:flex;align-items:center;gap:7px;font-size:.8rem;color:var(--text2);font-weight:500;}
+    .tgl{position:relative;width:36px;height:20px;cursor:pointer;flex-shrink:0;}
+    .tgl input{opacity:0;width:0;height:0;}
+    .tgl-track{
+      position:absolute;inset:0;background:var(--border2);
+      border-radius:999px;transition:background .2s;
+    }
+    .tgl-track::before{
+      content:"";position:absolute;width:14px;height:14px;
+      left:3px;top:3px;border-radius:50%;background:#fff;
+      box-shadow:0 1px 4px rgba(0,0,0,.15);transition:transform .2s;
+    }
+    .tgl input:checked+.tgl-track{background:var(--brand);}
+    .tgl input:checked+.tgl-track::before{transform:translateX(16px);}
+
+    /* ── LOG ───────────────────────────────────────────────── */
+    .log-box{
+      background:var(--card2);border-radius:8px;padding:10px;
+      font-size:.73rem;font-family:'Courier New',monospace;color:var(--muted);
+      max-height:160px;overflow-y:auto;line-height:1.65;
+      margin:0 14px 14px;border:1px solid var(--border);
+    }
+    .l-ok {color:var(--green);}
+    .l-err{color:var(--red);}
+    .l-tx {color:var(--brand);}
+
+    /* ── INPUT ─────────────────────────────────────────────── */
+    .inp{
+      width:100%;padding:8px 11px;border-radius:8px;
+      background:var(--surface);border:1px solid var(--border2);
+      color:var(--text);font-family:inherit;font-size:.83rem;outline:none;
+    }
+    .inp:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(2,132,199,.12);}
+    .inp-mono{font-family:'Courier New',monospace;}
+
+    /* ── QUICK PRESETS ─────────────────────────────────────── */
+    .presets{display:flex;flex-wrap:wrap;gap:7px;padding:12px 14px;}
+    .gesture-panel{padding:0 14px 14px;display:flex;flex-direction:column;gap:10px;}
+    .gesture-builder{display:grid;grid-template-columns:minmax(150px,210px) 1fr auto;gap:8px;align-items:start;}
+    .gesture-builder textarea{min-height:92px;resize:vertical;line-height:1.45;}
+    .gesture-help{font-size:.72rem;color:var(--muted);line-height:1.55;background:var(--muted-lt);border:1px solid var(--border);border-radius:8px;padding:8px 10px;}
+    .custom-gesture-row{display:flex;flex-wrap:wrap;gap:7px;min-height:32px;}
+    .gesture-chip{display:inline-flex;align-items:center;gap:4px;}
+    .gesture-chip button{padding:7px 10px;}
+    .gesture-del{width:26px;height:32px;padding:0!important;border-radius:8px;}
+
+    /* ── SETTINGS GRID ─────────────────────────────────────── */
+    .env-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    .env-field label{display:block;font-size:.73rem;color:var(--muted);font-weight:600;margin-bottom:5px;}
+    .secret-wrap{position:relative;}
+    .secret-wrap .inp{padding-right:40px;}
+    .secret-toggle{
+      position:absolute;right:6px;top:50%;transform:translateY(-50%);
+      width:30px;height:28px;border:0;border-radius:7px;
+      background:transparent;color:var(--muted);cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .secret-toggle:hover{background:var(--muted-lt);color:var(--brand);}
+    .secret-toggle svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+    .settings-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:14px;}
+    .settings-status{font-size:.78rem;color:var(--muted);}
+    .model-list{display:flex;flex-direction:column;gap:8px;font-size:.83rem;}
+    .model-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;background:var(--muted-lt);border-radius:8px;border:1px solid var(--border);}
+    .guide-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    .guide-card{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:9px;}
+    .guide-card h3{font-size:.92rem;color:var(--text);margin:0;}
+    .guide-card ol{padding-left:18px;color:var(--text2);font-size:.78rem;line-height:1.55;}
+    .guide-card code{background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:1px 5px;}
+    .guide-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:auto;}
+    .guide-actions a{text-decoration:none;}
+    .vitals-card{padding:14px;display:flex;flex-direction:column;gap:12px;}
+    .vital-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    .vital-tile{
+      min-height:78px;border:1px solid var(--border);background:var(--card2);
+      border-radius:10px;padding:10px;display:flex;flex-direction:column;justify-content:space-between;
+    }
+    .vital-label{font-size:.67rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+    .vital-value{font-size:1.25rem;line-height:1.05;font-weight:900;color:var(--text);}
+    .vital-sub{font-size:.72rem;color:var(--muted);font-weight:600;}
+    .vital-temp .vital-value{font-size:1.55rem;color:var(--brand);}
+    .vital-temp.fever .vital-value{color:var(--red);}
+    .vital-temp.warn .vital-value{color:var(--orange);}
+    .vital-wide{grid-column:1 / -1;min-height:74px;}
+    .vital-status-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+    .vital-status-pill{
+      padding:3px 8px;border-radius:999px;background:var(--muted-lt);color:var(--muted);
+      font-size:.68rem;font-weight:800;
+    }
+    .vital-status-pill.ok{background:var(--green-lt);color:var(--green);}
+    .vital-status-pill.warn{background:var(--orange-lt);color:var(--orange);}
+    .vital-status-pill.danger{background:var(--red-lt);color:var(--red);}
+    .patients-shell{max-width:1220px;margin:0 auto;display:flex;flex-direction:column;gap:14px;}
+    .patients-toolbar{display:grid;grid-template-columns:minmax(220px,1fr) auto auto;gap:10px;align-items:center;}
+    .patients-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
+    .patients-summary .vital-tile{min-height:66px;}
+    .patient-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;padding:14px;}
+    .patient-card{
+      display:grid;grid-template-columns:72px 1fr;gap:12px;
+      padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--card2);
+      cursor:pointer;min-width:0;
+    }
+    .patient-card:hover{border-color:var(--brand);box-shadow:0 4px 12px rgba(2,132,199,.10);}
+    .patient-card.active{border-color:var(--brand);background:#eff6ff;}
+    .patient-photo{
+      width:72px;height:72px;border-radius:10px;object-fit:cover;background:var(--muted-lt);
+      border:1px solid var(--border);
+    }
+    .patient-photo-empty{
+      width:72px;height:72px;border-radius:10px;background:linear-gradient(135deg,var(--brand-lt),#ede9fe);
+      color:var(--brand);font-weight:900;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);
+    }
+    .patient-name{font-size:.98rem;font-weight:850;color:var(--text);line-height:1.25;overflow-wrap:anywhere;}
+    .patient-meta{font-size:.72rem;color:var(--muted);line-height:1.55;margin-top:4px;}
+    .patient-badges{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
+    .patient-detail{display:grid;grid-template-columns:minmax(260px,.8fr) minmax(0,1.2fr);gap:14px;padding:14px;}
+    .patient-detail-photo{width:100%;max-height:360px;object-fit:cover;border-radius:10px;border:1px solid var(--border);background:var(--muted-lt);}
+    .patient-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+    .patient-field{padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card2);min-width:0;}
+    .patient-field span{display:block;font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);}
+    .patient-field strong{display:block;margin-top:3px;font-size:.86rem;color:var(--text);overflow-wrap:anywhere;}
+    .patient-json{font-size:.73rem;line-height:1.45;white-space:pre-wrap;overflow:auto;max-height:320px;background:var(--muted-lt);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text2);}
+    .patient-history{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
+    .patient-history-list{font-size:.76rem;line-height:1.55;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px;max-height:220px;overflow:auto;}
+    .patient-empty{padding:34px;text-align:center;color:var(--muted);}
+    .patient-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;}
+    .patient-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:14px;border-top:1px solid var(--border);}
+    .patient-form label{display:flex;flex-direction:column;gap:5px;font-size:.72rem;font-weight:800;text-transform:uppercase;color:var(--muted);}
+    .patient-form .span-2{grid-column:1/-1;}
+    .patient-form textarea{min-height:76px;resize:vertical;}
+    .patient-form-preview{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;align-items:center;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card2);}
+    .patient-form-preview img{width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--border);}
+    .patient-form-preview .patient-photo-empty{width:96px;height:96px;}
+    .patient-form-status{font-size:.76rem;color:var(--muted);padding:0 14px 12px;}
+    /* ── RESPONSIVE ────────────────────────────────────────── */
+    @media(max-width:1100px){
+      .g3{grid-template-columns:300px 1fr;}
+      .g3>.col:last-child{grid-column:span 2;}
+      .patient-detail{grid-template-columns:1fr;}
+      .patients-summary{grid-template-columns:repeat(2,minmax(0,1fr));}
+    }
+    @media(max-width:740px){
+      .g3,.g2{grid-template-columns:1fr;}
+      nav{padding:0 12px;}
+      .nav-logo{margin-right:10px;}
+      .page-tabs{overflow-x:auto;}
+      .page-tab{padding:6px 10px;white-space:nowrap;}
+      .ws-pill span{display:none;}
+      .page{padding:12px;}
+      .env-grid,.gesture-builder{grid-template-columns:1fr;}
+      .settings-actions{align-items:stretch;flex-direction:column;}
+      .model-row{align-items:flex-start;flex-direction:column;}
+      .guide-grid{grid-template-columns:1fr;}
+      .patients-toolbar,.patient-fields,.patient-history,.patient-form{grid-template-columns:1fr;}
+      .patients-summary{grid-template-columns:1fr;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     NAV
+══════════════════════════════════════════ -->
+<nav>
+  <div class="nav-logo">
+    <div class="nav-logo-dot">🤖</div>
+    UzMAX
+  </div>
+
+  <div class="page-tabs">
+    <button class="page-tab active" id="tab-medical" onclick="showPage('medical')">🏥 Medical AI</button>
+    <button class="page-tab" id="tab-robot"   onclick="showPage('robot')">
+      🕹 Robot
+      <span class="tab-dot" id="nav-robot-dot"></span>
+    </button>
+    <button class="page-tab" id="tab-patients" onclick="showPage('patients')">Patients</button>
+    <button class="page-tab" id="tab-settings" onclick="showPage('settings')">⚙️ Settings</button>
+  </div>
+
+  <div class="nav-right">
+    <button class="full-btn" id="full-btn" onclick="toggleFullView()" title="Full view" aria-label="Full view">
+      <svg id="full-icon-open" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M8 3H3v5"/><path d="M16 3h5v5"/><path d="M21 16v5h-5"/><path d="M8 21H3v-5"/>
+      </svg>
+      <svg id="full-icon-close" viewBox="0 0 24 24" aria-hidden="true" style="display:none;">
+        <path d="M9 3v6H3"/><path d="M15 3v6h6"/><path d="M21 15h-6v6"/><path d="M3 15h6v6"/>
+      </svg>
+    </button>
+    <div class="ws-pill" id="ws-pill">
+      <div class="ws-dot" id="ws-dot"></div>
+      <span id="ws-lbl">Ulanmoqda…</span>
+    </div>
+  </div>
+</nav>
+
+
+<!-- ══════════════════════════════════════════
+     PAGE — MEDICAL AI
+══════════════════════════════════════════ -->
+<div class="page active" id="page-medical">
+  <div class="g3">
+
+    <!-- LEFT: Camera + Thermal -->
+    <div class="col">
+
+      <!-- Camera card -->
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">📷 Camera · Face ID</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <label class="tgl-group">
+              <label class="tgl"><input type="checkbox" id="tgl-face"><span class="tgl-track"></span></label>
+              Enable
+            </label>
+            <span class="badge b-muted" id="face-badge">Standby</span>
+            <button class="btn btn-red btn-sm" id="face-reset-btn" onclick="resetFaceId()">Reset</button>
+          </div>
+        </div>
+        <!-- Person row (shown when identified) -->
+        <div class="person-row" id="person-row" style="display:none;">
+          <div class="p-avatar" id="p-avatar">👤</div>
+          <div>
+            <div class="p-name" id="p-name">—</div>
+            <div class="p-sub"  id="p-sub">—</div>
+          </div>
+        </div>
+        <!-- Video feed -->
+        <div class="cam-stage">
+          <video id="face-video" autoplay playsinline muted></video>
+          <canvas id="face-canvas"></canvas>
+          <div class="cam-live-badge" id="cam-live" style="display:none;">● LIVE</div>
+        </div>
+      </div>
+
+      <!-- Thermal camera card -->
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">🌡 Thermal Camera — MLX90640</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="badge b-muted" id="thermal-badge">Offline</span>
+            <button class="btn btn-ghost btn-sm" id="thermal-toggle" onclick="toggleThermal()">Off</button>
+          </div>
+        </div>
+
+        <!-- Canvas heatmap -->
+        <div id="thermal-live">
+          <canvas id="thermal-canvas" width="32" height="24" style="width:100%;aspect-ratio:32/24;display:block;image-rendering:pixelated;"></canvas>
+          <!-- Stats row -->
+          <div class="thermal-stats">
+            <div class="t-stat">
+              <div class="t-val" id="t-max">—</div>
+              <div class="t-key">MAX °C</div>
+            </div>
+            <div class="t-stat">
+              <div class="t-val" id="t-center">—</div>
+              <div class="t-key">CENTER °C</div>
+            </div>
+            <div class="t-stat">
+              <div class="t-val" id="t-avg">—</div>
+              <div class="t-key">AVG °C</div>
+            </div>
+            <div class="t-stat">
+              <div class="t-val" id="t-min">—</div>
+              <div class="t-key">MIN °C</div>
+            </div>
+          </div>
+        </div>
+        <!-- Offline placeholder -->
+        <div class="thermal-off" id="thermal-off">
+          <span>📡</span>
+          <p id="thermal-off-text">MLX90640 ulanmagan.<br>RPi I2C portiga ulang va serverni qayta ishga tushiring.</p>
+        </div>
+      </div>
+
+    </div><!-- /left -->
+
+    <!-- CENTER: Chat -->
+    <div class="col">
+
+      <div class="card" style="min-height:280px;">
+        <div class="card-head">
+          <span class="card-title">💬 AI Chat</span>
+          <select class="btn btn-ghost btn-sm" id="lang-sel" onchange="setLang(this.value)"
+            style="border:1px solid var(--border2);padding:4px 8px;border-radius:7px;font-size:.78rem;font-family:inherit;background:var(--surface);color:var(--text);cursor:pointer;outline:none;">
+            <option value="uz-UZ">O'zbekcha</option>
+            <option value="ru-RU">Русский</option>
+            <option value="en-US">English</option>
+          </select>
+        </div>
+        <div id="chat-box"></div>
+        <div class="chat-compose">
+          <input class="inp" id="chat-text" placeholder="Xabar yozing..." autocomplete="off"
+            onkeydown="if(event.key==='Enter')sendTextChat()">
+          <button class="btn btn-blue btn-sm" onclick="sendTextChat()">Send</button>
+        </div>
+      </div>
+
+      <!-- Voice controls -->
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">🎙 Voice</span>
+          <div style="display:flex;gap:14px;align-items:center;">
+            <label class="tgl-group">
+              <label class="tgl"><input type="checkbox" id="tgl-live"><span class="tgl-track"></span></label>
+              Live
+            </label>
+            <label class="tgl-group">
+              <label class="tgl"><input type="checkbox" id="tgl-interrupt"><span class="tgl-track"></span></label>
+              Interrupt
+            </label>
+          </div>
+        </div>
+
+        <!-- Animated orb (visible while speaking/listening) -->
+        <div id="voice-hero" style="display:none;margin:12px 14px 0;">
+          <div class="voice-hero">
+            <div class="voice-orb"></div>
+            <div class="voice-ring"></div>
+            <div class="voice-bars">
+              <span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;">
+          <button id="mic-btn" onclick="toggleMic()">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3zm-1 3a1 1 0 0 1 2 0v8a1 1 0 0 1-2 0V4zM5 10a1 1 0 0 1 1 1 6 6 0 0 0 12 0 1 1 0 0 1 2 0 8 8 0 0 1-7 7.93V21h3a1 1 0 0 1 0 2H8a1 1 0 0 1 0-2h3v-3.07A8 8 0 0 1 4 11a1 1 0 0 1 1-1z"/>
+            </svg>
+          </button>
+          <div>
+            <div id="mic-status" style="font-weight:700;font-size:.9rem;color:var(--text);">Tayyor</div>
+            <div id="mic-hint"   style="font-size:.75rem;color:var(--muted);margin-top:2px;">Tugmani bosib gapiring</div>
+          </div>
+        </div>
+
+        <!-- Volume bar -->
+        <div style="padding:0 16px 14px;">
+          <div id="vol-wrap" style="height:5px;border-radius:999px;background:var(--border);overflow:hidden;opacity:.35;transition:opacity .2s;">
+            <div id="vol-bar" style="height:100%;width:0;background:linear-gradient(90deg,#34d399,#0284c7);border-radius:999px;transition:width .07s;"></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /center -->
+
+    <!-- RIGHT: Partial outputs -->
+    <div class="col">
+      <div class="card">
+        <div class="card-head"><span class="card-title">📝 STT Partial</span></div>
+        <div id="stt-partial" style="padding:12px 14px;min-height:56px;font-size:.86rem;color:var(--muted);font-style:italic;">—</div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">📋 Patient Vitals</span></div>
+        <div class="vitals-card">
+          <div class="vital-grid">
+            <div class="vital-tile">
+              <div class="vital-label">Sana</div>
+              <div class="vital-value" id="vital-date">—</div>
+              <div class="vital-sub" id="vital-weekday">—</div>
+            </div>
+            <div class="vital-tile">
+              <div class="vital-label">Vaqt</div>
+              <div class="vital-value" id="vital-time">—</div>
+              <div class="vital-sub">Asia/Tashkent</div>
+            </div>
+            <div class="vital-tile vital-temp" id="vital-temp-tile">
+              <div class="vital-label">Human temp</div>
+              <div class="vital-value" id="vital-temp">—</div>
+              <div class="vital-sub" id="vital-temp-sub">Thermal kutilyapti</div>
+            </div>
+            <div class="vital-tile">
+              <div class="vital-label">Patient</div>
+              <div class="vital-value" id="vital-person">No person</div>
+              <div class="vital-sub" id="vital-person-sub">Camera standby</div>
+            </div>
+            <div class="vital-tile vital-wide">
+              <div class="vital-status-row">
+                <div>
+                  <div class="vital-label">Direction</div>
+                  <div class="vital-value" id="vital-direction">—</div>
+                </div>
+                <span class="vital-status-pill" id="vital-status">Waiting</span>
+              </div>
+              <div class="vital-sub" id="vital-queue">Doctor route and queue will appear here</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     PAGE — ROBOT CONTROL
+══════════════════════════════════════════ -->
+<div class="page" id="page-robot">
+
+  <!-- Port row -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-head">
+      <span class="card-title">🔌 Serial Connections</span>
+      <button class="btn btn-ghost btn-sm" onclick="scanPorts()">↻ Scan Ports</button>
+    </div>
+    <div style="display:flex;gap:8px;padding:0 14px 12px;">
+      <button class="btn btn-blue btn-sm" id="auto-connect-btn" onclick="autoConnect()">Auto Connect</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:14px;">
+
+      <!-- HAND -->
+      <div class="port-card">
+        <div class="port-card-row">
+          <span class="port-icon">✋</span>
+          <div style="flex:1;">
+            <div class="port-title">HAND</div>
+            <div class="port-lbl" id="hand-lbl">Not connected</div>
+          </div>
+          <div class="s-dot" id="dot-hand"></div>
+        </div>
+        <select class="psel" id="sel-hand"><option value="">— port —</option></select>
+        <div class="port-acts">
+          <button class="btn btn-blue btn-sm" id="con-hand"  onclick="conn('hand')">Connect</button>
+          <button class="btn btn-red  btn-sm" id="dis-hand"  onclick="disc('hand')" disabled>Disconnect</button>
+        </div>
+        <div class="port-err" id="err-hand"></div>
+      </div>
+
+      <!-- HEAD -->
+      <div class="port-card">
+        <div class="port-card-row">
+          <span class="port-icon">🧠</span>
+          <div style="flex:1;">
+            <div class="port-title">HEAD</div>
+            <div class="port-lbl" id="head-lbl">Not connected</div>
+          </div>
+          <div class="s-dot" id="dot-head"></div>
+        </div>
+        <select class="psel" id="sel-head"><option value="">— port —</option></select>
+        <div class="port-acts">
+          <button class="btn btn-blue btn-sm" id="con-head" onclick="conn('head')">Connect</button>
+          <button class="btn btn-red  btn-sm" id="dis-head" onclick="disc('head')" disabled>Disconnect</button>
+        </div>
+        <div class="port-err" id="err-head"></div>
+      </div>
+
+      <!-- MOVE -->
+      <div class="port-card">
+        <div class="port-card-row">
+          <span class="port-icon">🚗</span>
+          <div style="flex:1;">
+            <div class="port-title">MOVE</div>
+            <div class="port-lbl" id="move-lbl">Not connected</div>
+          </div>
+          <div class="s-dot" id="dot-move"></div>
+        </div>
+        <select class="psel" id="sel-move"><option value="">— port —</option></select>
+        <div class="port-acts">
+          <button class="btn btn-blue btn-sm" id="con-move" onclick="conn('move')">Connect</button>
+          <button class="btn btn-red  btn-sm" id="dis-move" onclick="disc('move')" disabled>Disconnect</button>
+        </div>
+        <div class="port-err" id="err-move"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Main controls -->
+  <div class="g3">
+
+    <!-- LEFT: D-pad + Head + LED -->
+    <div class="col">
+
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">🕹 Movement  <kbd style="font-size:.68rem;background:var(--muted-lt);padding:2px 5px;border-radius:4px;border:1px solid var(--border2);">WASD</kbd></span>
+          <span id="move-st" style="font-size:.76rem;color:var(--muted);">Idle</span>
+        </div>
+        <div class="dpad">
+          <div class="dp-empty"></div>
+          <button class="dp" data-cmd="MOVE BACK"  title="W">▲</button>
+          <div class="dp-empty"></div>
+
+          <button class="dp" data-cmd="MOVE LEFT"  title="A">◀</button>
+          <button class="dp dp-stop" onclick="mc('MOVE STOP')">⏹</button>
+          <button class="dp" data-cmd="MOVE RIGHT" title="D">▶</button>
+
+          <div class="dp-empty"></div>
+          <button class="dp" data-cmd="MOVE FWD"   title="S">▼</button>
+          <div class="dp-empty"></div>
+        </div>
+        <div style="padding:0 16px 14px;">
+          <div class="srv-row">
+            <span class="srv-lbl">Speed</span>
+            <input type="range" min="0" max="100" value="60" oninput="spd(this.value)">
+            <span class="srv-val" id="spd-val">60</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Head servo -->
+      <div class="card">
+        <div class="card-head"><span class="card-title">🧠 Head 180° Servo</span><span id="head-st" style="font-size:.76rem;color:var(--muted)">90°</span></div>
+        <div class="card-body">
+          <div class="head-gauge" id="head-gauge" aria-label="Head servo angle gauge">
+            <svg id="head-gauge-svg" viewBox="0 0 260 128" role="img" aria-label="0 to 180 degree head servo">
+              <path class="arc" d="M 24 112 A 106 106 0 0 1 236 112"></path>
+              <line class="baseline" x1="24" y1="112" x2="236" y2="112"></line>
+              <g id="head-gauge-ticks"></g>
+              <line class="needle" id="head-gauge-needle" x1="130" y1="112" x2="130" y2="28"></line>
+              <circle class="needle-dot" id="head-gauge-tip" cx="130" cy="28" r="6"></circle>
+              <circle class="pivot" cx="130" cy="112" r="6"></circle>
+            </svg>
+            <div class="head-gauge-value" id="head-gauge-value">90°</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
+            <button class="btn btn-ghost" onclick="headStep('LEFT')">◀ Left</button>
+            <button class="btn btn-blue" onclick="headCenter()">Center</button>
+            <button class="btn btn-ghost" onclick="headStep('RIGHT')">Right ▶</button>
+          </div>
+          <div class="srv-row">
+            <span class="srv-lbl">Step</span>
+            <input type="range" min="1" max="45" value="15" oninput="headSetStep(this.value)">
+            <span class="srv-val" id="head-speed-val">15</span>
+          </div>
+          <div class="srv-row">
+            <span class="srv-lbl">Center angle</span>
+            <input type="range" min="0" max="180" value="90" oninput="headNeutral(this.value)">
+            <span class="srv-val" id="head-neutral-val">90</span>
+          </div>
+          <div class="srv-row">
+            <span class="srv-lbl">Head angle</span>
+            <input id="head-angle-slider" type="range" min="0" max="180" value="90" oninput="headRaw(this.value)">
+            <span class="srv-val" id="head-raw-val">90</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- LED -->
+      <div class="card">
+        <div class="card-head"><span class="card-title">💡 LED Strip (84 LEDs)</span></div>
+        <div class="card-body">
+          <div class="led-row">
+            <div class="led-sw" title="Blue" style="background:#0000ff" onclick="led(0,0,255)"></div>
+            <div class="led-sw" title="Green" style="background:#00ff00" onclick="led(0,255,0)"></div>
+            <div class="led-sw" title="Red" style="background:#ff0000" onclick="led(255,0,0)"></div>
+            <div class="led-sw" title="Yellow" style="background:#ffff00" onclick="led(255,255,0)"></div>
+            <div class="led-sw" title="Magenta" style="background:#ff00ff" onclick="led(255,0,255)"></div>
+            <div class="led-sw" title="White" style="background:#ffffff;border-color:#cbd5e1;" onclick="led(255,255,255)"></div>
+            <div class="led-sw" title="Cyan" style="background:#00ffff" onclick="led(0,255,255)"></div>
+            <div class="led-sw" style="background:#1e293b;border-color:#64748b;" onclick="ledOff()">
+              <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:#94a3b8;margin:auto;display:block;margin-top:7px;"><path d="M6 18L18 6M6 6l12 12"/></svg>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+            <input type="color" id="led-pick" value="#2563eb"
+              style="width:40px;height:34px;border:1px solid var(--border2);border-radius:7px;background:var(--surface);padding:2px;cursor:pointer;outline:none;">
+            <button class="btn btn-blue btn-sm" onclick="sendLedPick()">📤 Send</button>
+            <button class="btn btn-ghost btn-sm" onclick="ledRain()">🌈 Rainbow</button>
+            <button class="btn btn-ghost btn-sm" onclick="ledOff()">⚫ Off</button>
+          </div>
+          <div class="srv-row">
+            <span class="srv-lbl">Brightness</span>
+            <input type="range" min="0" max="255" value="60" oninput="ledBrightness(this.value)">
+            <span class="srv-val" id="led-bright-val">60</span>
+          </div>
+        </div>
+      </div>
+    </div><!-- /left -->
+
+    <!-- CENTER: Hand servos + Quick actions -->
+    <div class="col">
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">✋ Right Hand  R1–R6</span>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-blue btn-sm" onclick="homeHand('R')">Home</button>
+            <button class="btn btn-ghost btn-sm" onclick="preset('R','open')">Open</button>
+            <button class="btn btn-ghost btn-sm" onclick="preset('R','close')">Close</button>
+          </div>
+        </div>
+        <div class="srv-grid" id="rhand"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">🤚 Left Hand  L1–L6</span>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-blue btn-sm" onclick="homeHand('L')">Home</button>
+            <button class="btn btn-ghost btn-sm" onclick="preset('L','open')">Open</button>
+            <button class="btn btn-ghost btn-sm" onclick="preset('L','close')">Close</button>
+          </div>
+        </div>
+        <div class="srv-grid" id="lhand"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">⚡ Gestures</span></div>
+        <div class="presets">
+          <button class="btn btn-blue"  onclick="homeAllHands()">Home</button>
+          <button class="btn btn-blue"  onclick="gesture('hello')">👋 Salom</button>
+          <button class="btn btn-green" onclick="gesture('open')">🖐 Ochiq</button>
+          <button class="btn btn-ghost" onclick="gesture('fist')">✊ Musht</button>
+          <button class="btn btn-ghost" onclick="gesture('wave')">🌊 To'lqin</button>
+          <button class="btn btn-ghost" onclick="gesture('nod')">🔄 Nod</button>
+        </div>
+        <div class="gesture-panel">
+          <div class="custom-gesture-row" id="custom-gestures"></div>
+          <div class="gesture-builder">
+            <input id="gesture-name" class="inp" placeholder="Gesture name">
+            <textarea id="gesture-commands" class="inp inp-mono" placeholder="R 1 60&#10;R 2 120&#10;WAIT 250&#10;HEAD SERVO 60&#10;WAIT 250&#10;HEAD SERVO 90"></textarea>
+            <button class="btn btn-blue btn-sm" onclick="saveCustomGesture()">Save</button>
+          </div>
+          <div class="gesture-help">
+            Commands: <code>R 1 90</code>, <code>L 6 0</code>, <code>HEAD SERVO 90</code>, <code>HEAD LED 0 0 255</code>, <code>MOVE STOP</code>, <code>WAIT 300</code>.
+          </div>
+        </div>
+      </div>
+    </div><!-- /center -->
+
+    <!-- RIGHT: Log + Terminal -->
+    <div class="col">
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">📋 Serial Log</span>
+          <button class="btn btn-ghost btn-sm" onclick="clrLog()">Clear</button>
+        </div>
+        <div class="log-box" id="log-box">
+          <span style="color:var(--muted)">Buyruqlar shu yerda…</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">💻 Raw Terminal</span></div>
+        <div class="card-body">
+          <div style="display:flex;gap:7px;margin-bottom:8px;">
+            <select id="raw-dev" class="psel" style="width:90px;">
+              <option value="hand">HAND</option>
+              <option value="head">HEAD</option>
+              <option value="move">MOVE</option>
+            </select>
+            <input id="raw-in" class="inp inp-mono" placeholder="R 1 90  /  HEAD LED 0 0 255"
+              onkeydown="if(event.key==='Enter')rawSend()">
+            <button class="btn btn-blue btn-sm" onclick="rawSend()">▶</button>
+          </div>
+          <div style="font-size:.7rem;color:var(--muted);line-height:1.7;">
+            HAND: <code>R 1 90</code>  /  <code>L 6 0</code><br>
+            HEAD: <code>HEAD SERVO 90</code> / <code>HEAD CENTER</code> / <code>HEAD LED 255 0 0</code><br>
+            MOVE: <code>MOVE SPEED 60</code> / <code>MOVE FWD</code> / <code>MOVE PING</code> / <code>MOVE STOP</code>
+          </div>
+        </div>
+      </div>
+    </div><!-- /right -->
+
+  </div>
+</div>
+
+
+<div class="page" id="page-patients">
+  <div class="patients-shell">
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Face ID Patients</span>
+        <div style="display:flex;gap:7px;align-items:center;">
+          <button class="btn btn-blue btn-sm" onclick="openPatientEditor()">Add patient</button>
+          <button class="btn btn-ghost btn-sm" onclick="loadPatients(true)">Reload</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="patients-toolbar">
+          <input class="inp" id="patients-search" placeholder="Search name, ID, doctor, metadata..." oninput="renderPatients()">
+          <select class="inp" id="patients-source-filter" onchange="renderPatients()">
+            <option value="">All sources</option>
+            <option value="face_id">Face ID</option>
+            <option value="registry">Registry</option>
+            <option value="doctor_queue">Doctor queue</option>
+            <option value="hospital_intake">Hospital intake</option>
+            <option value="hospital_visits">Hospital visits</option>
+          </select>
+          <span class="badge b-muted" id="patients-count">0 patients</span>
+        </div>
+        <div class="patients-summary" style="margin-top:12px;">
+          <div class="vital-tile"><div class="vital-label">Total</div><div class="vital-value" id="patients-total">0</div></div>
+          <div class="vital-tile"><div class="vital-label">Face ID</div><div class="vital-value" id="patients-face-total">0</div></div>
+          <div class="vital-tile"><div class="vital-label">Queued</div><div class="vital-value" id="patients-queue-total">0</div></div>
+          <div class="vital-tile"><div class="vital-label">With Images</div><div class="vital-value" id="patients-image-total">0</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="patient-editor-card" style="display:none;">
+      <div class="card-head">
+        <span class="card-title" id="patient-editor-title">Add patient</span>
+        <button class="btn btn-ghost btn-sm" onclick="closePatientEditor()">Close</button>
+      </div>
+      <div class="patient-form">
+        <label>Face image
+          <input class="inp" id="patient-image" type="file" accept="image/*" onchange="previewPatientImage()">
+        </label>
+        <div class="patient-form-preview" id="patient-image-preview">
+          <div class="patient-photo-empty">P</div>
+          <div style="font-size:.78rem;color:var(--muted);line-height:1.5;">Upload a clear face image for this patient. It will appear on the card and can be used by Face ID when embeddings are configured.</div>
+        </div>
+        <label>Name
+          <input class="inp" id="patient-first-name" autocomplete="off">
+        </label>
+        <label>Surname
+          <input class="inp" id="patient-last-name" autocomplete="off">
+        </label>
+        <label>Age
+          <input class="inp" id="patient-age" type="number" min="0" max="130">
+        </label>
+        <label>Phone
+          <input class="inp" id="patient-phone" autocomplete="off">
+        </label>
+        <label class="span-2">Notes
+          <textarea class="inp" id="patient-notes"></textarea>
+        </label>
+        <label class="span-2">Extra metadata JSON
+          <textarea class="inp inp-mono" id="patient-metadata" placeholder='{"language":"uz-UZ"}'></textarea>
+        </label>
+      </div>
+      <div class="patient-form-status" id="patient-form-status"></div>
+      <div class="card-body" style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn btn-ghost" onclick="closePatientEditor()">Cancel</button>
+        <button class="btn btn-blue" id="patient-save-btn" onclick="savePatientEditor()">Save patient</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">Patients and persons</span></div>
+      <div class="patient-list" id="patients-list">
+        <div class="patient-empty">Loading patients...</div>
+      </div>
+    </div>
+
+    <div class="card" id="patient-detail-card" style="display:none;">
+      <div class="card-head">
+        <span class="card-title">Full patient information</span>
+        <span class="badge b-muted" id="patient-detail-id"></span>
+      </div>
+      <div class="patient-detail" id="patient-detail"></div>
+    </div>
+  </div>
+</div>
+
+
+<div class="page" id="page-settings">
+  <div style="max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:16px;">
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">🔑 API Keys</span></div>
+      <div class="card-body">
+        <div class="env-grid">
+          <div class="env-field">
+            <label>YANDEX_API_KEY</label>
+            <input type="password" class="inp" placeholder="AQVN…">
+          </div>
+          <div class="env-field">
+            <label>YANDEX_CATALOG_ID</label>
+            <input type="text" class="inp" placeholder="b1g…">
+          </div>
+          <div class="env-field">
+            <label>OPENAI_API_KEY</label>
+            <input type="password" class="inp" placeholder="sk-…">
+          </div>
+          <div class="env-field">
+            <label>OPENAI_MODEL</label>
+            <input type="text" class="inp" placeholder="gpt-4o-mini">
+          </div>
+          <div class="env-field">
+            <label>GEMINI_API_KEY (optional)</label>
+            <input type="password" class="inp" placeholder="AIza…">
+          </div>
+          <div class="env-field">
+            <label>FACE_MATCH_THRESHOLD</label>
+            <input type="text" class="inp" value="0.62">
+          </div>
+        </div>
+        <p style="margin-top:12px;font-size:.76rem;color:var(--muted);background:var(--orange-lt);padding:10px 12px;border-radius:8px;border:1px solid #fed7aa;">
+          ⚠️ Haqiqiy saqlash uchun <code>uzmax_server/.env</code> faylni tahrirlang va serverni qayta ishga tushiring.
+        </p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">🤖 OpenAI Models</span></div>
+      <div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:.83rem;">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--muted-lt);border-radius:8px;border:1px solid var(--border);">
+            <code>gpt-4o-mini</code>
+            <span class="badge b-green">Recommended</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--muted-lt);border-radius:8px;border:1px solid var(--border);">
+            <code>gpt-4.1-mini</code>
+            <span class="badge b-blue">Higher quality</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--muted-lt);border-radius:8px;border:1px solid var(--border);">
+            <code>gpt-4.1-nano</code>
+            <span class="badge b-blue">Fast</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--muted-lt);border-radius:8px;border:1px solid var(--border);">
+            <code>OPENAI_MODEL</code>
+            <span class="badge b-blue">Editable</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">🌡 Thermal Camera Setup (RPi)</span></div>
+      <div class="card-body">
+        <pre style="font-size:.78rem;background:var(--muted-lt);padding:12px;border-radius:8px;border:1px solid var(--border);overflow-x:auto;color:var(--text2);">sudo raspi-config → Interface Options → I2C → Enable
+pip3 install adafruit-circuitpython-mlx90640 --break-system-packages
+# Restart server — heatmap avtomatik paydo bo'ladi</pre>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════ -->
+<script>
+'use strict';
+
+const SERVER_ORIGIN = location.protocol === 'file:' ? 'http://127.0.0.1:5000' : '';
+const WS_ORIGIN = location.protocol === 'file:' ? '127.0.0.1:5000' : location.host;
+const nativeFetch = window.fetch.bind(window);
+window.fetch = (resource, options) => {
+  if (typeof resource === 'string' && resource.startsWith('/')) {
+    return nativeFetch(SERVER_ORIGIN + resource, options);
+  }
+  return nativeFetch(resource, options);
+};
+
+// ── Page navigation ────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.page-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'patients') loadPatients();
+}
+
+function setFullViewState(on) {
+  document.body.classList.toggle('full-view', on);
+  const openIcon = document.getElementById('full-icon-open');
+  const closeIcon = document.getElementById('full-icon-close');
+  const btn = document.getElementById('full-btn');
+  if (openIcon) openIcon.style.display = on ? 'none' : 'block';
+  if (closeIcon) closeIcon.style.display = on ? 'block' : 'none';
+  if (btn) {
+    btn.title = on ? 'Exit full view' : 'Full view';
+    btn.setAttribute('aria-label', btn.title);
+  }
+}
+
+async function toggleFullView() {
+  const isNativeFull = !!document.fullscreenElement;
+  const isFull = isNativeFull || document.body.classList.contains('full-view');
+  try {
+    if (!isFull) {
+      await document.documentElement.requestFullscreen?.();
+      setFullViewState(true);
+    } else {
+      if (document.fullscreenElement) await document.exitFullscreen?.();
+      setFullViewState(false);
+    }
+  } catch {
+    setFullViewState(!isFull);
+  }
+}
+
+document.addEventListener('fullscreenchange', () => {
+  setFullViewState(!!document.fullscreenElement);
+});
+
+let patientsLoaded = false;
+let patientsLoading = false;
+let allPatients = [];
+let selectedPatientId = null;
+let editingPatientId = null;
+let patientImageData = null;
+
+function esc(value){
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[ch]));
+}
+
+function formatDateTime(value){
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('uz-UZ', {year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
+}
+
+function patientInitials(patient){
+  const name = (patient.full_name || `${patient.first_name || ''} ${patient.last_name || ''}`).trim();
+  const parts = name.split(/\s+/).filter(Boolean);
+  return (parts[0]?.[0] || 'P') + (parts[1]?.[0] || '');
+}
+
+function patientSearchBlob(patient){
+  return JSON.stringify(patient).toLowerCase();
+}
+
+function patientById(personId){
+  return allPatients.find(patient => patient.person_id === personId) || null;
+}
+
+function patientApiId(personId){
+  return encodeURIComponent(personId || '');
+}
+
+function compactEditableMetadata(patient){
+  const metadata = {...(patient?.metadata || {})};
+  ['age','phone','patient_phone','notes'].forEach(key => delete metadata[key]);
+  return metadata;
+}
+
+function resetPatientImagePreview(patient=null){
+  const preview = document.getElementById('patient-image-preview');
+  if (!preview) return;
+  const name = patient?.full_name || `${patient?.first_name || ''} ${patient?.last_name || ''}`.trim() || 'Patient';
+  if (patient?.image_url) {
+    preview.innerHTML = `<img src="${esc(patient.image_url)}" alt="${esc(name)}"><div style="font-size:.78rem;color:var(--muted);line-height:1.5;">Current face image is attached to this patient. Choose a new image to replace it.</div>`;
+  } else {
+    preview.innerHTML = `<div class="patient-photo-empty">${esc(patientInitials(patient || {}).toUpperCase())}</div><div style="font-size:.78rem;color:var(--muted);line-height:1.5;">Upload a clear face image for this patient. It will appear on the card and can be used by Face ID when embeddings are configured.</div>`;
+  }
+}
+
+function openPatientEditor(personId=null){
+  editingPatientId = personId;
+  patientImageData = null;
+  const patient = personId ? patientById(personId) : null;
+  document.getElementById('patient-editor-title').textContent = patient ? 'Edit patient' : 'Add patient';
+  document.getElementById('patient-first-name').value = patient?.first_name || '';
+  document.getElementById('patient-last-name').value = patient?.last_name || '';
+  document.getElementById('patient-age').value = patient?.age ?? '';
+  document.getElementById('patient-phone').value = (patient?.metadata || {}).phone || (patient?.metadata || {}).patient_phone || '';
+  document.getElementById('patient-notes').value = (patient?.metadata || {}).notes || '';
+  const editableMetadata = compactEditableMetadata(patient);
+  document.getElementById('patient-metadata').value = Object.keys(editableMetadata).length ? JSON.stringify(editableMetadata, null, 2) : '';
+  document.getElementById('patient-image').value = '';
+  document.getElementById('patient-form-status').textContent = '';
+  resetPatientImagePreview(patient);
+  document.getElementById('patient-editor-card').style.display = 'block';
+  document.getElementById('patient-first-name').focus();
+}
+
+function closePatientEditor(){
+  editingPatientId = null;
+  patientImageData = null;
+  const card = document.getElementById('patient-editor-card');
+  if (card) card.style.display = 'none';
+}
+
+function previewPatientImage(){
+  const input = document.getElementById('patient-image');
+  const file = input?.files?.[0];
+  if (!file) {
+    patientImageData = null;
+    resetPatientImagePreview(editingPatientId ? patientById(editingPatientId) : null);
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    patientImageData = String(reader.result || '');
+    document.getElementById('patient-image-preview').innerHTML = `<img src="${esc(patientImageData)}" alt="Patient face preview"><div style="font-size:.78rem;color:var(--muted);line-height:1.5;">New face image ready. Save the patient to attach it.</div>`;
+  };
+  reader.readAsDataURL(file);
+}
+
+function patientEditorPayload(){
+  const firstName = document.getElementById('patient-first-name').value.trim();
+  const lastName = document.getElementById('patient-last-name').value.trim();
+  const age = document.getElementById('patient-age').value.trim();
+  const phone = document.getElementById('patient-phone').value.trim();
+  const notes = document.getElementById('patient-notes').value.trim();
+  const metadataText = document.getElementById('patient-metadata').value.trim();
+  let metadata = {};
+  if (metadataText) {
+    metadata = JSON.parse(metadataText);
+    if (!metadata || Array.isArray(metadata) || typeof metadata !== 'object') {
+      throw new Error('Extra metadata must be a JSON object');
+    }
+  }
+  const payload = {first_name:firstName, last_name:lastName, age, phone, notes, metadata};
+  if (patientImageData) payload.image = patientImageData;
+  return payload;
+}
+
+async function savePatientEditor(){
+  const btn = document.getElementById('patient-save-btn');
+  const status = document.getElementById('patient-form-status');
+  const oldText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  status.textContent = '';
+  try {
+    const payload = patientEditorPayload();
+    const url = editingPatientId ? `/api/patients/${patientApiId(editingPatientId)}` : '/api/patients';
+    const method = editingPatientId ? 'PUT' : 'POST';
+    const res = await fetch(url, {method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.message || 'Patient save failed');
+    selectedPatientId = data.patient?.person_id || editingPatientId || selectedPatientId;
+    closePatientEditor();
+    await loadPatients(true);
+  } catch(e) {
+    status.textContent = e.message || String(e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = oldText;
+  }
+}
+
+async function deletePatient(personId){
+  const patient = patientById(personId);
+  const name = patient?.full_name || `${patient?.first_name || ''} ${patient?.last_name || ''}`.trim() || personId;
+  if (!confirm(`Delete patient "${name}"? Face ID data and this page record will be removed.`)) return;
+  const res = await fetch(`/api/patients/${patientApiId(personId)}`, {method:'DELETE'});
+  const data = await res.json();
+  if (!data.ok) {
+    alert(data.message || 'Delete failed');
+    return;
+  }
+  if (selectedPatientId === personId) selectedPatientId = null;
+  if (editingPatientId === personId) closePatientEditor();
+  await loadPatients(true);
+}
+
+async function loadPatients(force=false){
+  if (patientsLoading || (patientsLoaded && !force)) {
+    renderPatients();
+    return;
+  }
+  patientsLoading = true;
+  const list = document.getElementById('patients-list');
+  if (list) list.innerHTML = '<div class="patient-empty">Loading patients...</div>';
+  try {
+    const res = await fetch('/api/patients/full');
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.message || 'Could not load patients');
+    allPatients = data.patients || [];
+    patientsLoaded = true;
+    if (!selectedPatientId && allPatients[0]) selectedPatientId = allPatients[0].person_id;
+    renderPatients();
+  } catch(e) {
+    if (list) list.innerHTML = `<div class="patient-empty">Patients load failed: ${esc(e.message)}</div>`;
+  } finally {
+    patientsLoading = false;
+  }
+}
+
+function filteredPatients(){
+  const q = (document.getElementById('patients-search')?.value || '').trim().toLowerCase();
+  const source = document.getElementById('patients-source-filter')?.value || '';
+  return allPatients.filter(patient => {
+    const sources = patient.source || [];
+    if (source && !sources.includes(source)) return false;
+    if (q && !patientSearchBlob(patient).includes(q)) return false;
+    return true;
+  });
+}
+
+function updatePatientsSummary(items){
+  const set = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+  set('patients-total', allPatients.length);
+  set('patients-face-total', allPatients.filter(p => (p.source || []).includes('face_id')).length);
+  set('patients-queue-total', allPatients.filter(p => (p.queue || []).length).length);
+  set('patients-image-total', allPatients.filter(p => p.image_url).length);
+  set('patients-count', `${items.length} shown`);
+}
+
+function renderPatients(){
+  const list = document.getElementById('patients-list');
+  if (!list) return;
+  const items = filteredPatients();
+  updatePatientsSummary(items);
+  if (!items.length) {
+    list.innerHTML = '<div class="patient-empty">No patients found.</div>';
+    document.getElementById('patient-detail-card').style.display = 'none';
+    return;
+  }
+  if (!items.some(p => p.person_id === selectedPatientId)) selectedPatientId = items[0].person_id;
+  list.innerHTML = items.map(patient => {
+    const name = patient.full_name || `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || 'Unnamed patient';
+    const active = patient.person_id === selectedPatientId ? ' active' : '';
+    const photo = patient.image_url
+      ? `<img class="patient-photo" src="${esc(patient.image_url)}" alt="${esc(name)}">`
+      : `<div class="patient-photo-empty">${esc(patientInitials(patient).toUpperCase())}</div>`;
+    const badges = (patient.source || []).map(source => `<span class="badge b-blue">${esc(source)}</span>`).join('');
+    const idArg = encodeURIComponent(patient.person_id || '');
+    return `
+      <div class="patient-card${active}" onclick="selectPatient(decodeURIComponent('${idArg}'))">
+        ${photo}
+        <div>
+          <div class="patient-name">${esc(name)}</div>
+          <div class="patient-meta">
+            ID: ${esc(patient.person_id || '—')}<br>
+            Age: ${esc(patient.age ?? '—')} · Last: ${esc(formatDateTime(patient.last_visited_at))}<br>
+            Queue: ${(patient.queue || []).length} · Visits: ${(patient.hospital_visits || []).length} · Images: ${patient.snapshot_count || 0}
+          </div>
+          <div class="patient-badges">${badges}</div>
+          <div class="patient-actions">
+            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openPatientEditor(decodeURIComponent('${idArg}'))">Edit</button>
+            <button class="btn btn-red btn-sm" onclick="event.stopPropagation();deletePatient(decodeURIComponent('${idArg}'))">Delete</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+  renderPatientDetail(items.find(p => p.person_id === selectedPatientId) || items[0]);
+}
+
+function selectPatient(personId){
+  selectedPatientId = personId;
+  renderPatients();
+}
+
+function compactList(items, emptyText, renderItem){
+  if (!items || !items.length) return `<div class="patient-history-list">${esc(emptyText)}</div>`;
+  return `<div class="patient-history-list">${items.map(renderItem).join('<hr style="border:0;border-top:1px solid var(--border);margin:8px 0;">')}</div>`;
+}
+
+function renderPatientDetail(patient){
+  const card = document.getElementById('patient-detail-card');
+  const box = document.getElementById('patient-detail');
+  if (!card || !box || !patient) return;
+  card.style.display = 'block';
+  const idBadge = document.getElementById('patient-detail-id');
+  if (idBadge) idBadge.textContent = patient.person_id || '';
+  const name = patient.full_name || `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || 'Unnamed patient';
+  const idArg = encodeURIComponent(patient.person_id || '');
+  const photo = patient.image_url
+    ? `<img class="patient-detail-photo" src="${esc(patient.image_url)}" alt="${esc(name)}">`
+    : `<div class="patient-photo-empty" style="width:100%;height:260px;font-size:2rem;">${esc(patientInitials(patient).toUpperCase())}</div>`;
+  const queueHtml = compactList(patient.queue, 'No doctor queue entries.', item => `
+    <div><strong>${esc(item.doctor_name || item.specialty || 'Doctor')}</strong><br>
+    Room: ${esc(item.room || '—')} · Queue: ${esc(item.queue_number || '—')}<br>
+    ${esc(formatDateTime(item.created_at))} · ${esc(item.status || '')}</div>`);
+  const visitsHtml = compactList(patient.hospital_visits, 'No hospital visits.', item => `
+    <div><strong>${esc(item.doctor || 'Doctor')}</strong><br>
+    ${esc(item.complaint || '')}<br>
+    Room: ${esc(item.room || '—')} · Queue: ${esc(item.queue_no || '—')}<br>
+    ${esc(formatDateTime(item.created_at))}</div>`);
+  box.innerHTML = `
+    <div>
+      ${photo}
+      <div class="patient-badges" style="margin-top:10px;">
+        ${(patient.source || []).map(source => `<span class="badge b-blue">${esc(source)}</span>`).join('')}
+      </div>
+    </div>
+    <div>
+      <div class="patient-fields">
+        <div class="patient-field"><span>Full name</span><strong>${esc(name)}</strong></div>
+        <div class="patient-field"><span>Face ID</span><strong>${esc(patient.person_id || '—')}</strong></div>
+        <div class="patient-field"><span>Name</span><strong>${esc(patient.first_name || '—')}</strong></div>
+        <div class="patient-field"><span>Surname</span><strong>${esc(patient.last_name || '—')}</strong></div>
+        <div class="patient-field"><span>Age</span><strong>${esc(patient.age ?? '—')}</strong></div>
+        <div class="patient-field"><span>Last visited</span><strong>${esc(formatDateTime(patient.last_visited_at))}</strong></div>
+        <div class="patient-field"><span>Phone</span><strong>${esc((patient.metadata || {}).phone || (patient.metadata || {}).patient_phone || '—')}</strong></div>
+        <div class="patient-field"><span>Snapshots</span><strong>${esc(patient.snapshot_count || 0)}</strong></div>
+      </div>
+      <div class="patient-actions">
+        <button class="btn btn-blue btn-sm" onclick="openPatientEditor(decodeURIComponent('${idArg}'))">Edit patient</button>
+        <button class="btn btn-red btn-sm" onclick="deletePatient(decodeURIComponent('${idArg}'))">Delete patient</button>
+      </div>
+      <div class="patient-history">
+        <div>
+          <div class="card-title" style="margin:12px 0 6px;">Doctor queue</div>
+          ${queueHtml}
+        </div>
+        <div>
+          <div class="card-title" style="margin:12px 0 6px;">Hospital visits</div>
+          ${visitsHtml}
+        </div>
+      </div>
+      <div class="card-title" style="margin:12px 0 6px;">All metadata and fields</div>
+      <pre class="patient-json">${esc(JSON.stringify(patient, null, 2))}</pre>
+    </div>`;
+}
+
+// Settings tab is generated here so the form stays clean even when older
+// placeholder markup is still present in the HTML.
+const SETTINGS_KEYS = [
+  'YANDEX_API_KEY',
+  'YANDEX_CATALOG_ID',
+  'OPENAI_API_KEY',
+  'OPENAI_MODEL',
+  'GEMINI_API_KEY',
+  'FACE_EMBED_MODEL',
+  'FACE_EMBED_DET_SIZE',
+  'FACE_MATCH_THRESHOLD',
+  'FACE_MATCH_MIN_CONFIDENCE',
+  'FACE_MATCH_MARGIN',
+  'FACE_MIN_SAMPLES',
+  'YANDEX_TTS_VOICE',
+  'YANDEX_TTS_VOICE_UZ',
+  'YANDEX_TTS_VOICE_EN',
+  'YANDEX_TTS_VOICE_RU',
+  'YANDEX_TTS_SPEED',
+  'YANDEX_TTS_SAMPLE_RATE',
+  'STT_PROVIDER',
+  'ARDUINO_CLI_PATH',
+  'ESP32_FQBN',
+];
+
+function fieldHtml(key, label, placeholder='', type='text'){
+  const input = `<input id="set-${key}" type="${type}" class="inp" placeholder="${placeholder}" autocomplete="off">`;
+  const field = type === 'password'
+    ? `<div class="secret-wrap">${input}
+        <button type="button" class="secret-toggle" onclick="toggleSecret('${key}')" aria-label="Show ${label}" title="Show/hide">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>`
+    : input;
+  return `
+    <div class="env-field">
+      <label for="set-${key}">${label}</label>
+      ${field}
+    </div>`;
+}
+
+function toggleSecret(key){
+  const el = document.getElementById('set-' + key);
+  if (!el) return;
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+function modelRow(label, key, value, badge='Use'){
+  return `
+    <div class="model-row">
+      <code>${value}</code>
+      <button class="btn btn-ghost btn-sm" onclick="pickModel('${key}','${value}')">${badge}</button>
+    </div>`;
+}
+
+function buildSettingsUI(){
+  const page = document.getElementById('page-settings');
+  if (!page) return;
+  page.innerHTML = `
+    <div style="max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:16px;">
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">API keys and models</span>
+          <button class="btn btn-ghost btn-sm" onclick="loadSettings()">Reload</button>
+        </div>
+        <div class="card-body">
+          <div class="env-grid">
+            ${fieldHtml('YANDEX_API_KEY','Yandex SpeechKit API key','AQVN...', 'password')}
+            ${fieldHtml('YANDEX_CATALOG_ID','Yandex catalog/folder ID','b1g...')}
+            ${fieldHtml('OPENAI_API_KEY','OpenAI API key','sk-...', 'password')}
+            ${fieldHtml('OPENAI_MODEL','OpenAI chatbot model','gpt-4o-mini')}
+            ${fieldHtml('GEMINI_API_KEY','Gemini API key (optional legacy)','AIza...', 'password')}
+            ${fieldHtml('FACE_EMBED_MODEL','Face ID embedder model','buffalo_s')}
+            ${fieldHtml('FACE_EMBED_DET_SIZE','Face detector input size','640,640')}
+            ${fieldHtml('FACE_MATCH_THRESHOLD','Face match threshold','0.82')}
+            ${fieldHtml('FACE_MATCH_MIN_CONFIDENCE','Minimum face confidence','0.82')}
+            ${fieldHtml('FACE_MATCH_MARGIN','Face ambiguity margin','0.04')}
+            ${fieldHtml('FACE_MIN_SAMPLES','Face samples to register','1')}
+            ${fieldHtml('YANDEX_TTS_VOICE','Yandex default TTS voice','yulduz')}
+            ${fieldHtml('YANDEX_TTS_VOICE_UZ','Yandex Uzbek TTS voice','yulduz')}
+            ${fieldHtml('YANDEX_TTS_VOICE_EN','Yandex English TTS voice','john')}
+            ${fieldHtml('YANDEX_TTS_VOICE_RU','Yandex Russian TTS voice','yulduz_ru')}
+            ${fieldHtml('YANDEX_TTS_SPEED','Yandex TTS speed','1.1')}
+            ${fieldHtml('YANDEX_TTS_SAMPLE_RATE','Yandex TTS sample rate','48000')}
+            ${fieldHtml('STT_PROVIDER','Speech-to-text provider','yandex_stream')}
+            ${fieldHtml('ARDUINO_CLI_PATH','Arduino CLI path','C:\\\\Program Files\\\\Arduino IDE\\\\resources\\\\app\\\\lib\\\\backend\\\\resources\\\\arduino-cli.exe')}
+            ${fieldHtml('ESP32_FQBN','ESP32 board FQBN','esp32:esp32:esp32')}
+          </div>
+          <div class="settings-actions">
+            <span class="settings-status" id="settings-status">Settings load from uzmax_server/.env</span>
+            <button class="btn btn-blue" onclick="saveSettings()">Save settings</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">Quick model presets</span></div>
+        <div class="card-body model-list">
+          ${modelRow('GPT 4o mini','OPENAI_MODEL','gpt-4o-mini','Set')}
+          ${modelRow('GPT 4.1 mini','OPENAI_MODEL','gpt-4.1-mini','Set')}
+          ${modelRow('GPT 4.1 nano','OPENAI_MODEL','gpt-4.1-nano','Set')}
+          ${modelRow('Uzbek female','YANDEX_TTS_VOICE','yulduz','Voice')}
+          ${modelRow('Uzbek female','YANDEX_TTS_VOICE','nigora','Voice')}
+          ${modelRow('Uzbek female','YANDEX_TTS_VOICE','zamira','Voice')}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">How to get API keys</span></div>
+        <div class="card-body">
+          <div class="guide-grid">
+            <div class="guide-card">
+              <h3>Yandex SpeechKit</h3>
+              <ol>
+                <li>Open Yandex Cloud and create/select a cloud folder.</li>
+                <li>Enable SpeechKit access and create an API key.</li>
+                <li>Copy the API key into <code>YANDEX_API_KEY</code>.</li>
+                <li>Copy the folder ID into <code>YANDEX_CATALOG_ID</code>.</li>
+                <li>Use <code>YANDEX_TTS_VOICE</code> for Uzbek chatbot speech.</li>
+              </ol>
+              <div class="guide-actions">
+                <a class="btn btn-ghost btn-sm" href="https://yandex.cloud/en/docs/speechkit/concepts/auth" target="_blank" rel="noopener">SpeechKit auth</a>
+                <a class="btn btn-ghost btn-sm" href="https://console.yandex.cloud/" target="_blank" rel="noopener">Yandex console</a>
+              </div>
+            </div>
+
+            <div class="guide-card">
+              <h3>OpenAI chatbot</h3>
+              <ol>
+                <li>Open the OpenAI platform API keys page.</li>
+                <li>Create a new secret key.</li>
+                <li>Paste it into <code>OPENAI_API_KEY</code>.</li>
+                <li>Put a model in <code>OPENAI_MODEL</code>, for example <code>gpt-4o-mini</code>.</li>
+              </ol>
+              <div class="guide-actions">
+                <a class="btn btn-ghost btn-sm" href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">Create key</a>
+                <a class="btn btn-ghost btn-sm" href="https://help.openai.com/en/articles/4936850-where-do-i-find-my-openai-api-key" target="_blank" rel="noopener">Help</a>
+                <a class="btn btn-ghost btn-sm" href="https://platform.openai.com/docs/api-reference" target="_blank" rel="noopener">API docs</a>
+              </div>
+            </div>
+
+            <div class="guide-card">
+              <h3>Local Face ID embeddings</h3>
+              <ol>
+                <li>Face ID uses local InsightFace embeddings through ONNX Runtime.</li>
+                <li>Use <code>FACE_EMBED_MODEL</code> to choose the model pack.</li>
+                <li>The default model is <code>buffalo_s</code>.</li>
+                <li>After changing the model, reset Face ID and register faces again.</li>
+              </ol>
+              <div class="guide-actions">
+                <a class="btn btn-ghost btn-sm" href="https://github.com/deepinsight/insightface" target="_blank" rel="noopener">InsightFace</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">Local hardware notes</span></div>
+        <div class="card-body">
+          <div class="gesture-help">
+            Yandex keys power Uzbek STT/TTS. OpenAI is the chatbot LLM provider.
+            Face ID runs locally with InsightFace. After saving, new chat and face requests use the updated values.
+            Uzbek TTS defaults to <code>yulduz</code>; <code>nigora</code> and <code>zamira</code> are available presets.
+          </div>
+          <pre style="font-size:.78rem;background:var(--muted-lt);padding:12px;border-radius:8px;border:1px solid var(--border);overflow-x:auto;color:var(--text2);margin-top:10px;">RPi thermal setup:
+sudo raspi-config
+# Interface Options -> I2C -> Enable
+pip3 install adafruit-circuitpython-mlx90640 --break-system-packages</pre>
+        </div>
+      </div>
+    </div>`;
+}
+
+function setSettingsStatus(text, type=''){
+  const el = document.getElementById('settings-status');
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = type === 'err' ? 'var(--red)' : type === 'ok' ? 'var(--green)' : 'var(--muted)';
+}
+
+async function loadSettings(){
+  try {
+    const res = await fetch('/api/settings');
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.message || 'Could not load settings');
+    const settings = data.settings || {};
+    SETTINGS_KEYS.forEach(key => {
+      const el = document.getElementById('set-' + key);
+      if (el) el.value = settings[key] || '';
+    });
+    setSettingsStatus('Loaded from ' + (data.path || 'uzmax_server/.env'), 'ok');
+  } catch(e) {
+    setSettingsStatus('Settings load failed: ' + e.message, 'err');
+  }
+}
+
+async function saveSettings(){
+  const settings = {};
+  SETTINGS_KEYS.forEach(key => {
+    const el = document.getElementById('set-' + key);
+    if (el) settings[key] = el.value.trim();
+  });
+  try {
+    setSettingsStatus('Saving...');
+    const res = await fetch('/api/settings',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({settings})
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.message || 'Save failed');
+    setSettingsStatus('Saved to ' + (data.path || 'uzmax_server/.env'), 'ok');
+  } catch(e) {
+    setSettingsStatus('Save failed: ' + e.message, 'err');
+  }
+}
+
+function pickModel(key, value){
+  const el = document.getElementById('set-' + key);
+  if (el) {
+    el.value = value;
+    el.focus();
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+//  WEBSOCKET — Voice AI
+// ═══════════════════════════════════════════════════════════════
+let ws = null, audioCtx = null, mediaStream = null, processor = null, micSource = null, micMuteGain = null;
+let isListening = false, isAgentSpeaking = false;
+let audioQ = [], playingAudio = false, currentRespId = null;
+let liveMode = false, allowInterrupt = false;
+let sttReady = false, sttReadyTimer = null, pendingAutoListen = false, ttsStreamEnded = false;
+let llmStreamDone = false, responseTextCommitted = false;
+let activeAudioSources = [];
+let playbackNextAt = 0;
+let lastAssistantText = '';
+let heardSpeech = false, speechMs = 0, silenceMs = 0, recStartedAt = 0;
+let noiseFloor = 0.005;   // adaptive ambient-noise level (EMA), calibrated per turn
+let preRoll = [];         // recent frames held until speech starts (clean clip onset)
+
+// Absolute floors (quiet rooms) — the adaptive thresholds never go below these.
+const VAD_START = 0.012;
+const VAD_STOP = 0.007;
+const VAD_MIN_SPEECH_MS = 220;
+const VAD_SILENCE_MS = 1150;
+const VAD_MAX_MS = 18000;
+const VAD_NOSPEECH_MS = 8000;   // if no speech starts within this, end the turn (no 18s hang)
+// Speech must exceed noiseFloor * MARGIN; below floor * SILENCE_MARGIN counts as silence.
+// This makes steady background noise NOT register as speech (no stuck "listening").
+const VAD_FLOOR_ADAPT = 0.97;
+const VAD_SPEECH_MARGIN = 3.0;
+const VAD_SILENCE_MARGIN = 1.8;
+const PREROLL_FRAMES = 4;
+
+function enableLiveConversation() {
+  liveMode = true;
+  allowInterrupt = true;
+  const liveToggle = document.getElementById('tgl-live');
+  const interruptToggle = document.getElementById('tgl-interrupt');
+  if (liveToggle) liveToggle.checked = true;
+  if (interruptToggle) interruptToggle.checked = true;
+  ws && ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify({
+    type:'set_settings',
+    live_mode:liveMode,
+    allow_interrupt:allowInterrupt
+  }));
+}
+
+function wsInit() {
+  const p = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${p}//${WS_ORIGIN}/ws/chat`);
+
+  ws.onopen = () => {
+    setWS(true);
+    chatMsg('ai', '✅ Server bilan ulandi');
+    ws.send(JSON.stringify({ type:'set_settings', live_mode:liveMode, allow_interrupt:allowInterrupt }));
+    ws.send(JSON.stringify({ type:'set_language',  lang: document.getElementById('lang-sel').value }));
+  };
+  ws.onclose = () => { setWS(false); setTimeout(wsInit, 3000); };
+  ws.onerror = () => setWS(false);
+
+  ws.onmessage = async ({ data }) => {
+    const m = JSON.parse(data);
+    switch (m.type) {
+      case 'stt_partial':
+        document.getElementById('stt-partial').textContent = m.text;
+        break;
+      case 'stt_ready':
+        sttReady = true;
+        document.getElementById('stt-partial').textContent = 'Tinglanyapti...';
+        micState('listening');
+        break;
+      case 'stt_final':
+        chatMsg('user', m.text);
+        document.getElementById('stt-partial').textContent = '—';
+        break;
+      case 'stt_empty':
+        document.getElementById('stt-partial').textContent = '—';
+        micState('idle');
+        pendingAutoListen = !!liveMode;
+        maybeAutoListen();
+        break;
+      case 'response_started':
+        currentRespId = m.response_id;
+        isAgentSpeaking = true;
+        ttsStreamEnded = false;
+        llmStreamDone = false;
+        responseTextCommitted = false;
+        pendingAutoListen = false;
+        stopAudioPlayback();
+        micState('speaking');
+        setStreamText('');
+        break;
+      case 'llm_partial':
+        if (m.response_id === currentRespId)
+          appendStreamText(m.text);
+        break;
+      case 'tts_chunk':
+        if (m.response_id === currentRespId) {
+          const raw = atob(m.audio);
+          const buf = new Uint8Array(raw.length);
+          for (let i=0;i<raw.length;i++) buf[i]=raw.charCodeAt(i);
+          audioQ.push({ buffer:buf.buffer, sampleRate:m.sample_rate || 48000 });
+          if (!playingAudio) playNext();
+        }
+        break;
+      case 'tts_end':
+        if (m.response_id === currentRespId) {
+          ttsStreamEnded = true;
+          if (llmStreamDone) {
+            commitAssistantText();
+            if (!playingAudio && !audioQ.length) finishAssistantPlayback();
+          }
+        }
+        break;
+      case 'llm_done':
+        if (m.response_id === currentRespId) {
+          if (!getStreamText() && m.text) setStreamText(m.text);
+          llmStreamDone = true;
+          commitAssistantText();
+          if (ttsStreamEnded && !playingAudio && !audioQ.length) finishAssistantPlayback();
+        }
+        break;
+      case 'interrupt':
+        stopAudioPlayback();
+        isAgentSpeaking = false;
+        ttsStreamEnded = true;
+        micState(isListening ? 'listening' : 'idle');
+        break;
+      case 'ready_to_listen':
+        pendingAutoListen = true;
+        maybeAutoListen();
+        break;
+      case 'chat_error':
+        chatMsg('ai', m.message || 'Xatolik yuz berdi.');
+        micState('idle');
+        break;
+    }
+  };
+}
+
+function setWS(on) {
+  const pill = document.getElementById('ws-pill');
+  const dot  = document.getElementById('ws-dot');
+  const lbl  = document.getElementById('ws-lbl');
+  pill.className = on ? 'ws-pill online' : 'ws-pill';
+  dot.className  = on ? 'ws-dot online' : 'ws-dot';
+  lbl.textContent = on ? 'Ulangan' : 'Uzildi';
+}
+
+function sendTextChat() {
+  const input = document.getElementById('chat-text');
+  const text = (input.value || '').trim();
+  if (!text) return;
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    chatMsg('ai', 'Server bilan aloqa yoq.');
+    return;
+  }
+  chatMsg('user', text);
+  input.value = '';
+  setStreamText('');
+  ws.send(JSON.stringify({ type:'text_message', text }));
+}
+
+function setStreamText(text='') {
+  lastAssistantText = text || '';
+  const stream = document.getElementById('llm-stream');
+  if (stream) stream.textContent = text;
+}
+
+function appendStreamText(text='') {
+  lastAssistantText += text || '';
+  const stream = document.getElementById('llm-stream');
+  if (stream) stream.textContent += text;
+}
+
+function getStreamText() {
+  return (document.getElementById('llm-stream')?.textContent || lastAssistantText || '').trim();
+}
+
+async function ensureCtx() {
+  if (!audioCtx) audioCtx = new AudioContext({ sampleRate:48000 });
+  if (audioCtx.state === 'suspended') await audioCtx.resume();
+}
+function pcm16ToAudioBuffer(arrayBuffer, sampleRate) {
+  const pcm = new Int16Array(arrayBuffer);
+  const audioBuffer = audioCtx.createBuffer(1, pcm.length, sampleRate);
+  const out = audioBuffer.getChannelData(0);
+  for (let i=0;i<pcm.length;i++) out[i] = Math.max(-1, Math.min(1, pcm[i] / 32768));
+  return audioBuffer;
+}
+
+function stopAudioPlayback() {
+  activeAudioSources.forEach(src => {
+    try { src.onended = null; src.stop(); } catch {}
+  });
+  activeAudioSources = [];
+  audioQ = [];
+  playingAudio = false;
+  playbackNextAt = audioCtx ? audioCtx.currentTime : 0;
+}
+
+function finishAssistantPlayback() {
+  playingAudio = false;
+  isAgentSpeaking = false;
+  currentRespId = null;
+  micState('idle');
+  if (liveMode) {
+    pendingAutoListen = true;
+    maybeAutoListen();
+  }
+}
+
+function commitAssistantText() {
+  if (responseTextCommitted) return;
+  const stream = document.getElementById('llm-stream');
+  const text = getStreamText();
+  if (text && text !== '—') chatMsg('ai', text);
+  if (stream) stream.textContent = '—';
+  lastAssistantText = '';
+  responseTextCommitted = true;
+}
+
+function maybeAutoListen() {
+  if (!pendingAutoListen || !liveMode || isListening || isAgentSpeaking || playingAudio || audioQ.length) return;
+  pendingAutoListen = false;
+  startRec();
+}
+
+function completeAudioSource(src) {
+  activeAudioSources = activeAudioSources.filter(x => x !== src);
+  scheduleAudioPlayback();
+}
+
+async function scheduleAudioPlayback() {
+  if (!audioQ.length && !activeAudioSources.length) {
+    playingAudio = false;
+    if (ttsStreamEnded) finishAssistantPlayback();
+    return;
+  }
+  if (!audioQ.length) return;
+
+  playingAudio = true;
+  await ensureCtx();
+  playbackNextAt = Math.max(playbackNextAt || 0, audioCtx.currentTime + 0.015);
+
+  while (audioQ.length && activeAudioSources.length < 8) {
+    const chunk = audioQ.shift();
+    try {
+      const src = audioCtx.createBufferSource();
+      src.buffer = pcm16ToAudioBuffer(chunk.buffer, chunk.sampleRate);
+      src.connect(audioCtx.destination);
+      const startAt = Math.max(playbackNextAt, audioCtx.currentTime + 0.01);
+      src.onended = () => completeAudioSource(src);
+      activeAudioSources.push(src);
+      src.start(startAt);
+      playbackNextAt = startAt + src.buffer.duration;
+    } catch {
+      continue;
+    }
+  }
+}
+
+function playNext() {
+  scheduleAudioPlayback();
+}
+
+function toggleMic() {
+  if (isAgentSpeaking && allowInterrupt) {
+    ws && ws.send(JSON.stringify({type:'interrupt'}));
+    stopAudioPlayback();
+    isAgentSpeaking=false;
+  }
+  isListening ? stopRec() : startRec();
+}
+async function startRec() {
+  if (!ws || ws.readyState!==WebSocket.OPEN) { alert('Server ulanmagan'); return; }
+  if (isListening) return;
+  if (isAgentSpeaking && !allowInterrupt) return;
+  pendingAutoListen = false;
+  sttReady = false;
+  heardSpeech = false;
+  speechMs = 0;
+  silenceMs = 0;
+  noiseFloor = 0.005;
+  preRoll = [];
+  recStartedAt = performance.now();
+  await ensureCtx();
+  ws.send(JSON.stringify({type:'start_speech'}));
+  clearTimeout(sttReadyTimer);
+  sttReadyTimer = setTimeout(() => { sttReady = true; }, 600);
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation:true, noiseSuppression:true, autoGainControl:true }
+    });
+  } catch(e) {
+    clearTimeout(sttReadyTimer);
+    sttReady = false;
+    ws.send(JSON.stringify({type:'end_speech'}));
+    micState('idle');
+    alert('Microphone: ' + e.message);
+    return;
+  }
+  micSource = audioCtx.createMediaStreamSource(mediaStream);
+  micMuteGain = audioCtx.createGain();
+  micMuteGain.gain.value = 0;
+  processor  = audioCtx.createScriptProcessor(4096,1,1);
+  micSource.connect(processor);
+  processor.connect(micMuteGain);
+  micMuteGain.connect(audioCtx.destination);
+  isListening = true;
+  micState('listening');
+  processor.onaudioprocess = e => {
+    if (!isListening || !sttReady || !ws || ws.readyState !== WebSocket.OPEN) return;
+    const f32 = e.inputBuffer.getChannelData(0);
+    const vol  = f32.reduce((s,v)=>s+Math.abs(v),0)/f32.length;
+    document.getElementById('vol-bar').style.width = Math.min(vol*320,100)+'%';
+    document.getElementById('vol-wrap').style.opacity='1';
+    const frameMs = (f32.length / audioCtx.sampleRate) * 1000;
+    // Adaptive thresholds relative to the measured ambient noise floor, so steady
+    // background noise does not count as speech (prevents the stuck "listening" turn).
+    const speechThresh  = Math.max(VAD_START, noiseFloor * VAD_SPEECH_MARGIN);
+    const silenceThresh = Math.max(VAD_STOP,  noiseFloor * VAD_SILENCE_MARGIN);
+    if (vol >= speechThresh) {
+      heardSpeech = true;
+      speechMs += frameMs;
+      silenceMs = 0;
+    } else {
+      // Not speech: slowly track the ambient floor (always, so loud rooms raise the bar).
+      noiseFloor = VAD_FLOOR_ADAPT * noiseFloor + (1 - VAD_FLOOR_ADAPT) * vol;
+      if (heardSpeech && vol <= silenceThresh) silenceMs += frameMs;
+      else if (heardSpeech) silenceMs = Math.max(0, silenceMs - frameMs);
+    }
+    const samples16k = downsampleTo16k(f32, audioCtx.sampleRate);
+    const i16 = new Int16Array(samples16k.length);
+    for (let i=0;i<samples16k.length;i++) i16[i]=Math.max(-32768,Math.min(32767,samples16k[i]*32767));
+    // Filter before the provider: only stream once speech has started, with a short
+    // pre-roll so the first word's onset isn't clipped. Pure-noise turns send nothing.
+    if (heardSpeech) {
+      if (preRoll.length) { preRoll.forEach(b => ws.send(b)); preRoll = []; }
+      ws.send(i16.buffer);
+    } else {
+      preRoll.push(i16.buffer);
+      if (preRoll.length > PREROLL_FRAMES) preRoll.shift();
+    }
+    const elapsed = performance.now() - recStartedAt;
+    if ((heardSpeech && speechMs >= VAD_MIN_SPEECH_MS && silenceMs >= VAD_SILENCE_MS)
+        || (!heardSpeech && elapsed >= VAD_NOSPEECH_MS)
+        || elapsed >= VAD_MAX_MS) {
+      stopRec();
+    }
+  };
+}
+function stopRec() {
+  if (!isListening && !processor && !mediaStream) return;
+  isListening=false;
+  clearTimeout(sttReadyTimer);
+  sttReady = false;
+  if (processor)   { processor.disconnect(); processor.onaudioprocess=null; processor=null; }
+  if (micSource)   { micSource.disconnect(); micSource=null; }
+  if (micMuteGain) { micMuteGain.disconnect(); micMuteGain=null; }
+  if (mediaStream) { mediaStream.getTracks().forEach(t=>t.stop()); mediaStream=null; }
+  document.getElementById('vol-bar').style.width='0';
+  document.getElementById('vol-wrap').style.opacity='.35';
+  micState('processing');
+  ws && ws.send(JSON.stringify({type:'end_speech'}));
+}
+function micState(s) {
+  const btn  = document.getElementById('mic-btn');
+  const stat = document.getElementById('mic-status');
+  const hint = document.getElementById('mic-hint');
+  const hero = document.getElementById('voice-hero');
+  btn.className = '';
+  if (s==='listening') {
+    btn.classList.add('listening');
+    stat.textContent='Tinglayapman…'; hint.textContent='Qayta bosib to\'xtating';
+    hero.style.display='block';
+  } else if (s==='speaking') {
+    btn.classList.add('speaking');
+    stat.textContent='Robot gapirmoqda…'; hint.textContent=allowInterrupt?'Bosib to\'xtatish mumkin':'';
+    hero.style.display='block';
+  } else {
+    stat.textContent='Tayyor'; hint.textContent='Tugmani bosib gapiring';
+    hero.style.display='none';
+  }
+}
+function micState(s) {
+  const btn  = document.getElementById('mic-btn');
+  const stat = document.getElementById('mic-status');
+  const hint = document.getElementById('mic-hint');
+  const hero = document.getElementById('voice-hero');
+  const lang = document.getElementById('lang-sel')?.value || 'uz-UZ';
+  const labels = {
+    'uz-UZ': {
+      listening: ['Tinglayapman...', "Gap tugasa o'zi to'xtaydi"],
+      speaking: ['Robot gapirmoqda...', allowInterrupt ? "Bosib to'xtatish mumkin" : ''],
+      processing: ['Tushunyapman...', 'Javob tayyorlanmoqda'],
+      idle: ['Tayyor', 'Tugmani bosib gapiring'],
+    },
+    'en-US': {
+      listening: ['Listening...', 'It stops automatically after silence'],
+      speaking: ['Robot is speaking...', allowInterrupt ? 'Press to interrupt' : ''],
+      processing: ['Understanding...', 'Preparing the answer'],
+      idle: ['Ready', 'Press the button and speak'],
+    },
+    'ru-RU': {
+      listening: ['Слушаю...', 'Остановится автоматически после паузы'],
+      speaking: ['Робот говорит...', allowInterrupt ? 'Нажмите, чтобы прервать' : ''],
+      processing: ['Распознаю...', 'Готовлю ответ'],
+      idle: ['Готово', 'Нажмите кнопку и говорите'],
+    },
+  };
+  const copy = labels[lang] || labels['uz-UZ'];
+  btn.className = '';
+  if (s==='listening') {
+    btn.classList.add('listening');
+    stat.textContent=copy.listening[0]; hint.textContent=copy.listening[1];
+    hero.style.display='block';
+  } else if (s==='speaking') {
+    btn.classList.add('speaking');
+    stat.textContent=copy.speaking[0]; hint.textContent=copy.speaking[1];
+    hero.style.display='block';
+  } else if (s==='processing') {
+    stat.textContent=copy.processing[0]; hint.textContent=copy.processing[1];
+    hero.style.display='block';
+  } else {
+    stat.textContent=copy.idle[0]; hint.textContent=copy.idle[1];
+    hero.style.display='none';
+  }
+}
+
+function chatMsg(role, text) {
+  if (!text.trim()) return;
+  const box = document.getElementById('chat-box');
+  const d   = document.createElement('div');
+  d.className  = 'msg ' + (role==='user' ? 'msg-user' : 'msg-ai');
+  d.textContent = text;
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+  if (role === 'ai') updateDirectionFromText(text);
+}
+
+function updateDateVitals() {
+  const now = new Date();
+  const dateEl = document.getElementById('vital-date');
+  const weekdayEl = document.getElementById('vital-weekday');
+  const timeEl = document.getElementById('vital-time');
+  if (dateEl) dateEl.textContent = now.toLocaleDateString('uz-UZ', { day:'2-digit', month:'2-digit', year:'numeric' });
+  if (weekdayEl) weekdayEl.textContent = now.toLocaleDateString('uz-UZ', { weekday:'long' });
+  if (timeEl) timeEl.textContent = now.toLocaleTimeString('uz-UZ', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+}
+
+function updatePersonVitals(name='', sub='Camera standby') {
+  const personEl = document.getElementById('vital-person');
+  const subEl = document.getElementById('vital-person-sub');
+  activePersonName = name || '';
+  if (personEl) personEl.textContent = name || 'No person';
+  if (subEl) subEl.textContent = sub;
+}
+
+function updateTempVitals(snapshot=null) {
+  const tile = document.getElementById('vital-temp-tile');
+  const tempEl = document.getElementById('vital-temp');
+  const subEl = document.getElementById('vital-temp-sub');
+  if (!tile || !tempEl || !subEl) return;
+  tile.classList.remove('fever','warn');
+  if (!snapshot || !snapshot.ok || !Number.isFinite(Number(snapshot.max))) {
+    tempEl.textContent = '—';
+    subEl.textContent = thermalEnabled ? 'Thermal kutilyapti' : "Thermal o'chirilgan";
+    return;
+  }
+  const max = Number(snapshot.max);
+  tempEl.textContent = `${max.toFixed(1)}°C`;
+  if (max >= 37.5) {
+    tile.classList.add('fever');
+    subEl.textContent = 'Isitma ehtimoli bor';
+  } else if (max >= 35) {
+    tile.classList.add('warn');
+    subEl.textContent = 'Skrining faol';
+  } else {
+    subEl.textContent = 'Normal skrining';
+  }
+}
+
+function updateDirectionVitals(direction='—', queueText='Doctor route and queue will appear here', status='Waiting', statusType='') {
+  const dirEl = document.getElementById('vital-direction');
+  const queueEl = document.getElementById('vital-queue');
+  const statusEl = document.getElementById('vital-status');
+  if (dirEl) dirEl.textContent = direction;
+  if (queueEl) queueEl.textContent = queueText;
+  if (statusEl) {
+    statusEl.textContent = status;
+    statusEl.className = `vital-status-pill ${statusType || ''}`.trim();
+  }
+}
+
+function updateDirectionFromText(text='') {
+  const speciality = text.match(/Sizga\s+(.+?)\s+shifokori/i)?.[1]
+    || text.match(/Recommended specialist:\s*([^\n.]+)/i)?.[1]
+    || text.match(/Рекомендуемый специалист:\s*([^\n.]+)/i)?.[1];
+  const doctor = text.match(/Shifokor:\s*([^\n]+)/i)?.[1]
+    || text.match(/Doctor:\s*([^\n]+)/i)?.[1]
+    || text.match(/Врач:\s*([^\n]+)/i)?.[1];
+  const room = text.match(/Xona:\s*([^\n]+)/i)?.[1]
+    || text.match(/Room:\s*([^\n]+)/i)?.[1]
+    || text.match(/Кабинет:\s*([^\n]+)/i)?.[1];
+  const queue = text.match(/Navbat raqamingiz:\s*(\d+)/i)?.[1]
+    || text.match(/Your queue number:\s*(\d+)/i)?.[1]
+    || text.match(/Ваш номер очереди:\s*(\d+)/i)?.[1];
+  if (speciality || doctor || room || queue) {
+    const direction = speciality || doctor || 'Doctor';
+    const detail = [
+      doctor ? `Doctor: ${doctor}` : '',
+      room ? `Room: ${room}` : '',
+      queue ? `Queue: ${queue}` : '',
+    ].filter(Boolean).join(' · ');
+    updateDirectionVitals(direction, detail || 'Direction ready', 'Queued', 'ok');
+  }
+}
+
+document.getElementById('tgl-live').addEventListener('change', function() {
+  liveMode = this.checked;
+  ws && ws.send(JSON.stringify({type:'set_settings',live_mode:liveMode,allow_interrupt:allowInterrupt}));
+  pendingAutoListen = liveMode;
+  maybeAutoListen();
+});
+document.getElementById('tgl-interrupt').addEventListener('change', function() {
+  allowInterrupt = this.checked;
+  ws && ws.send(JSON.stringify({type:'set_settings',live_mode:liveMode,allow_interrupt:allowInterrupt}));
+});
+function setLang(lang) {
+  ws && ws.send(JSON.stringify({type:'set_language',lang}));
+}
+
+// Downsample mic audio to 16 kHz — the rate the STT session is configured for and
+// the one Yandex's Uzbek model handles best. Averaging-based decimation.
+function downsampleTo16k(input, sourceRate) {
+  const targetRate = 16000;
+  if (sourceRate <= targetRate) return input;
+  const ratio = sourceRate / targetRate;
+  const newLength = Math.floor(input.length / ratio);
+  const result = new Float32Array(newLength);
+  let inputOffset = 0;
+  for (let i=0;i<newLength;i++) {
+    const nextOffset = Math.round((i + 1) * ratio);
+    let sum = 0, count = 0;
+    for (let j=inputOffset;j<nextOffset && j<input.length;j++) {
+      sum += input[j];
+      count++;
+    }
+    result[i] = count ? sum / count : 0;
+    inputOffset = nextOffset;
+  }
+  return result;
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+//  THERMAL CAMERA  (WebSocket /ws/thermal)
+// ═══════════════════════════════════════════════════════════════
+let thermalWS  = null;
+let thermalEnabled = localStorage.getItem('uzmax_thermal_enabled') === '1';
+let latestThermalSnapshot = null;
+const TCANVAS  = document.getElementById('thermal-canvas');
+const TCTX     = TCANVAS.getContext('2d');
+
+// Inferno-like colormap (cold→blue, warm→orange, hot→white)
+function tempToRGB(t, tMin, tMax) {
+  const ratio = Math.max(0, Math.min(1, (t - tMin) / (tMax - tMin || 1)));
+  // 5-stop gradient: black → blue → red → orange → yellow → white
+  const stops = [
+    [0,0,128],     // 0%  deep blue
+    [128,0,255],   // 20% purple
+    [255,0,0],     // 45% red
+    [255,165,0],   // 70% orange
+    [255,255,180], // 100% near-white yellow
+  ];
+  const n   = stops.length - 1;
+  const idx = ratio * n;
+  const lo  = Math.floor(idx);
+  const hi  = Math.min(lo+1, n);
+  const f   = idx - lo;
+  const r   = Math.round(stops[lo][0] + f*(stops[hi][0]-stops[lo][0]));
+  const g   = Math.round(stops[lo][1] + f*(stops[hi][1]-stops[lo][1]));
+  const b   = Math.round(stops[lo][2] + f*(stops[hi][2]-stops[lo][2]));
+  return [r,g,b];
+}
+
+function drawThermal(data) {
+  if (!thermalEnabled) {
+    setThermalOffUi("Thermal camera o'chirilgan.<br>Yoqish uchun ON tugmasini bosing.", 'Off');
+    updateTempVitals(null);
+    return;
+  }
+
+  const { frame, rows, cols, max, min, avg, center, ok } = data;
+
+  if (!ok) {
+    const msg = data.message || (
+      data.reason === 'missing_dependencies'
+        ? "Python thermal kutubxonalari o'rnatilmagan."
+        : data.reason === 'unsupported_platform'
+          ? "Windows I2C sensorni bevosita o'qiy olmayapti. Serverni Raspberry Pi ichida ishga tushiring yoki FT232H kabi USB-I2C bridge ishlating."
+        : 'MLX90640 ulanmagan yoki I2C ishlamayapti.'
+    );
+    const install = data.install ? `<br><code>${data.install}</code>` : '';
+    setThermalOffUi(`${msg}${install}`, 'Offline');
+    updateTempVitals(null);
+    return;
+  }
+
+  // Show live panel
+  document.getElementById('thermal-live').style.display = 'block';
+  document.getElementById('thermal-off').style.display  = 'none';
+  document.getElementById('thermal-badge').textContent  = `${max}°C`;
+  document.getElementById('thermal-badge').className    = max > 37.5 ? 'badge b-red' : max > 35 ? 'badge b-orange' : 'badge b-blue';
+  latestThermalSnapshot = {
+    ok: true,
+    source: data.source || 'thermal',
+    max: Number(max),
+    min: Number(min),
+    avg: Number(avg),
+    center: Number(center),
+    timestamp: Date.now()
+  };
+  updateTempVitals(latestThermalSnapshot);
+
+  // Draw 32×24 heatmap pixel by pixel
+  TCANVAS.width  = cols;
+  TCANVAS.height = rows;
+  const img = TCTX.createImageData(cols, rows);
+  for (let i = 0; i < frame.length; i++) {
+    const [r,g,b] = tempToRGB(frame[i], min, max);
+    img.data[i*4+0] = r;
+    img.data[i*4+1] = g;
+    img.data[i*4+2] = b;
+    img.data[i*4+3] = 255;
+  }
+  TCTX.putImageData(img, 0, 0);
+
+  // Draw center crosshair
+  const cx = Math.floor(cols/2);
+  const cy = Math.floor(rows/2);
+  TCTX.strokeStyle = 'rgba(255,255,255,0.85)';
+  TCTX.lineWidth   = 0.5;
+  TCTX.beginPath();
+  TCTX.moveTo(cx-2,cy); TCTX.lineTo(cx+2,cy);
+  TCTX.moveTo(cx,cy-2); TCTX.lineTo(cx,cy+2);
+  TCTX.stroke();
+
+  // Update stats
+  function tempClass(v) {
+    return v > 37.5 ? 'hot' : v > 35 ? 'warm' : 'cold';
+  }
+  ['max','center','avg','min'].forEach(k => {
+    const el = document.getElementById('t-'+k);
+    const v  = data[k];
+    el.textContent = v !== null ? v.toFixed(1) : '—';
+    el.className   = 't-val ' + (v !== null ? tempClass(v) : '');
+  });
+}
+
+function setThermalOffUi(message, badgeText='Off') {
+  const live = document.getElementById('thermal-live');
+  const off = document.getElementById('thermal-off');
+  const badge = document.getElementById('thermal-badge');
+  const toggle = document.getElementById('thermal-toggle');
+  const offText = document.getElementById('thermal-off-text');
+
+  latestThermalSnapshot = null;
+  if (live) live.style.display = 'none';
+  if (off) off.style.display = 'flex';
+  if (badge) {
+    badge.textContent = badgeText;
+    badge.className = 'badge b-muted';
+  }
+  if (toggle) toggle.textContent = thermalEnabled ? 'Off' : 'On';
+  if (offText) offText.innerHTML = message;
+  ['max','center','avg','min'].forEach(k => {
+    const el = document.getElementById('t-'+k);
+    if (!el) return;
+    el.textContent = '—';
+    el.className = 't-val';
+  });
+  updateTempVitals(null);
+}
+
+function patientThermalPayload() {
+  if (!latestThermalSnapshot || !latestThermalSnapshot.ok) return null;
+  if (Date.now() - latestThermalSnapshot.timestamp > 15000) return null;
+  return {
+    ok: true,
+    source: latestThermalSnapshot.source,
+    max: latestThermalSnapshot.max,
+    min: latestThermalSnapshot.min,
+    avg: latestThermalSnapshot.avg,
+    center: latestThermalSnapshot.center
+  };
+}
+
+function updateThermalToggle() {
+  const toggle = document.getElementById('thermal-toggle');
+  if (toggle) toggle.textContent = thermalEnabled ? 'Off' : 'On';
+}
+
+async function setServerThermalState(enabled) {
+  try {
+    await fetch('/api/thermal/state', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({enabled})
+    });
+  } catch {}
+}
+
+async function toggleThermal() {
+  thermalEnabled = !thermalEnabled;
+  localStorage.setItem('uzmax_thermal_enabled', thermalEnabled ? '1' : '0');
+  updateThermalToggle();
+
+  if (thermalEnabled) {
+    await setServerThermalState(true);
+    thermalConnect();
+  } else {
+    await setServerThermalState(false);
+    if (thermalWS) {
+      try { thermalWS.onclose = null; thermalWS.close(); } catch {}
+      thermalWS = null;
+    }
+    setThermalOffUi("Thermal camera o'chirilgan.<br>Yoqish uchun ON tugmasini bosing.", 'Off');
+  }
+}
+
+async function initThermalState() {
+  updateThermalToggle();
+  await setServerThermalState(thermalEnabled);
+  if (thermalEnabled) {
+    thermalConnect();
+  } else {
+    setThermalOffUi("Thermal camera o'chirilgan.<br>Yoqish uchun ON tugmasini bosing.", 'Off');
+  }
+}
+
+function thermalConnect() {
+  if (!thermalEnabled) {
+    setThermalOffUi("Thermal camera o'chirilgan.<br>Yoqish uchun ON tugmasini bosing.", 'Off');
+    return;
+  }
+  if (thermalWS) { try { thermalWS.close(); } catch{} }
+  const p   = location.protocol==='https:' ? 'wss:' : 'ws:';
+  thermalWS = new WebSocket(`${p}//${WS_ORIGIN}/ws/thermal`);
+
+  thermalWS.onmessage = ({ data }) => {
+    try { drawThermal(JSON.parse(data)); } catch {}
+  };
+  thermalWS.onclose = () => {
+    if (!thermalEnabled) return;
+    drawThermal({ ok:false });
+    setTimeout(thermalConnect, 5000);
+  };
+  thermalWS.onerror = () => { drawThermal({ ok:false }); };
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+//  FACE RECOGNITION
+// ═══════════════════════════════════════════════════════════════
+let faceEnabled = false, faceCamSt = null;
+let facePresent = false;
+let lastFaceSeenAt = 0;
+let lastFaceIdentifyAt = 0;
+let lastDetectedFaceCount = 0;
+let activeKnownPersonId = null;
+let activePersonName = '';
+let pendingUnknownFace = false;
+let unknownFaceSamples = [];
+let identifyInFlight = false;
+let faceLoopTimer = null;
+let localFaceDetector = null;
+let localFaceDetectorStatus = 'idle';
+const FACE_ABSENCE_MS = 1800;
+const FACE_DETECT_INTERVAL_MS = 300;
+const FACE_IDENTIFY_COOLDOWN_MS = 2000;
+const FACE_MIN_SAMPLES = 1;
+
+function setFaceUi(state, person=null, detail='') {
+  const badge = document.getElementById('face-badge');
+  const row = document.getElementById('person-row');
+  const name = document.getElementById('p-name');
+  const sub = document.getElementById('p-sub');
+  const avatar = document.getElementById('p-avatar');
+
+  if (state === 'standby') {
+    badge.textContent = 'Standby';
+    badge.className = 'badge b-muted';
+    row.style.display = 'none';
+    name.textContent = '—';
+    sub.textContent = '—';
+    avatar.textContent = '👤';
+    updatePersonVitals('', 'Camera standby');
+    return;
+  }
+
+  row.style.display = 'flex';
+
+  if (state === 'scanning') {
+    badge.textContent = 'Scanning';
+    badge.className = 'badge b-blue';
+    name.textContent = 'Looking for person';
+    sub.textContent = 'Camera is checking face ID';
+    avatar.textContent = '👤';
+  } else if (state === 'known') {
+    const fullName = person?.full_name || `${person?.first_name || ''} ${person?.last_name || ''}`.trim() || 'Known patient';
+    badge.textContent = `Person: ${fullName}`;
+    badge.className = 'badge b-green';
+    name.textContent = fullName;
+    sub.textContent = detail || `Face score: ${person?.score ?? '—'}`;
+    avatar.textContent = '😊';
+    updatePersonVitals(fullName, 'Recognized patient');
+  } else if (state === 'unknown') {
+    badge.textContent = 'New person';
+    badge.className = 'badge b-orange';
+    name.textContent = 'Yangi bemor';
+    sub.textContent = detail || "Ro'yxatdan o'tkazish kutilmoqda";
+    avatar.textContent = '👤';
+    updatePersonVitals('Yangi bemor', "Ism so'ralmoqda");
+  } else if (state === 'empty') {
+    badge.textContent = 'No person';
+    badge.className = 'badge b-muted';
+    name.textContent = 'Odam topilmadi';
+    sub.textContent = "Kamera oldida odam ko'rinmadi";
+    avatar.textContent = '👤';
+    updatePersonVitals('', 'Camera empty');
+  } else if (state === 'error') {
+    badge.textContent = 'Face ID error';
+    badge.className = 'badge b-red';
+    name.textContent = 'Face ID ishlamadi';
+    sub.textContent = detail || 'Settings yoki kamera holatini tekshiring';
+    avatar.textContent = '👤';
+    updatePersonVitals('', 'Face ID error');
+  }
+}
+
+function faceBoxKey(box) {
+  return [box?.x || 0, box?.y || 0, box?.w || 0, box?.h || 0].join(':');
+}
+
+function drawFaceBoxes(boxes=[], selectedFace=null) {
+  const canvas = document.getElementById('face-canvas');
+  const vid = document.getElementById('face-video');
+  const ctx = canvas.getContext('2d');
+  canvas.width = vid.videoWidth || 640;
+  canvas.height = vid.videoHeight || 480;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.font = '16px Inter, sans-serif';
+  const visibleBoxes = selectedFace ? [selectedFace] : (boxes.slice(0, 1));
+  visibleBoxes.forEach((box) => {
+    const x = Number(box.x || 0);
+    const y = Number(box.y || 0);
+    const w = Number(box.w || 0);
+    const h = Number(box.h || 0);
+    if (w <= 0 || h <= 0) return;
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#22c55e';
+    ctx.fillStyle = '#22c55e';
+    ctx.strokeRect(x, y, w, h);
+    ctx.fillText('Face', x, Math.max(18, y - 8));
+  });
+}
+
+function initLocalFaceDetector() {
+  if (localFaceDetectorStatus === 'ready' || localFaceDetectorStatus === 'unsupported') return;
+  if (!('FaceDetector' in window)) {
+    localFaceDetectorStatus = 'unsupported';
+    console.warn('Local FaceDetector API is not available in this browser.');
+    return;
+  }
+  try {
+    localFaceDetector = new FaceDetector({fastMode: true, maxDetectedFaces: 1});
+    localFaceDetectorStatus = 'ready';
+  } catch (e) {
+    localFaceDetector = null;
+    localFaceDetectorStatus = 'unsupported';
+    console.warn('Local FaceDetector init failed:', e);
+  }
+}
+
+function normalizeLocalFaceBox(item) {
+  const box = item?.boundingBox || item;
+  if (!box) return null;
+  const x = Number(box.x ?? box.left ?? 0);
+  const y = Number(box.y ?? box.top ?? 0);
+  const w = Number(box.width ?? box.w ?? 0);
+  const h = Number(box.height ?? box.h ?? 0);
+  if (w <= 0 || h <= 0) return null;
+  return {x, y, w, h, area: Math.round(w * h)};
+}
+
+async function detectFacesLocal() {
+  initLocalFaceDetector();
+  const vid = document.getElementById('face-video');
+  if (!vid || !vid.videoWidth || !vid.videoHeight) return [];
+  if (localFaceDetectorStatus !== 'ready' || !localFaceDetector) return [];
+  try {
+    const detected = await localFaceDetector.detect(vid);
+    return (detected || [])
+      .map(normalizeLocalFaceBox)
+      .filter(Boolean)
+      .sort((a, b) => Number(b.area || 0) - Number(a.area || 0))
+      .slice(0, 1);
+  } catch (e) {
+    console.warn('Local face detect error:', e);
+    return [];
+  }
+}
+
+function addUnknownFaceSample(face) {
+  if (!face?.embedding || !face?.snapshot_path) return false;
+  if (unknownFaceSamples.some(sample => sample.snapshot_path === face.snapshot_path)) return false;
+  unknownFaceSamples.push({
+    embedding: face.embedding,
+    snapshot_path: face.snapshot_path,
+    quality: face.quality || {},
+  });
+  unknownFaceSamples = unknownFaceSamples.slice(-5);
+  return true;
+}
+
+function notifyFaceIdentity(face) {
+  if (!face) return;
+  const boxes = Array.isArray(face.faces) ? face.faces : [];
+  drawFaceBoxes(boxes, face.selected_face || null);
+
+  if (face.status === 'no_face') {
+    const wasPresent = facePresent;
+    if (wasPresent && Date.now() - lastFaceSeenAt > FACE_ABSENCE_MS) {
+      facePresent = false;
+      lastDetectedFaceCount = 0;
+      activeKnownPersonId = null;
+      pendingUnknownFace = false;
+      unknownFaceSamples = [];
+      drawFaceBoxes([]);
+      setFaceUi('empty');
+      ws && ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify({type:'person_left'}));
+    } else if (!wasPresent) {
+      setFaceUi('empty');
+    }
+    return;
+  }
+
+  facePresent = true;
+  lastFaceSeenAt = Date.now();
+  lastDetectedFaceCount = boxes.length || 1;
+
+  if (face.status === 'bad_quality') {
+    const reasonText = face.reason === 'face_too_small'
+      ? 'Yaqinroq keling: yuz kamida 90 px bo‘lishi kerak'
+      : face.reason === 'face_blurry'
+        ? 'Kadr xira: iltimos qimirlamay kameraga qarang'
+        : 'Face ID uchun kadr sifati yetarli emas';
+    setFaceUi('unknown', null, reasonText);
+    return;
+  }
+
+  if (face.status === 'known' && face.person) {
+    const p = face.person;
+    setFaceUi('known', p);
+    if (activeKnownPersonId === p.person_id && !pendingUnknownFace) return;
+    enableLiveConversation();
+    activeKnownPersonId = p.person_id;
+    pendingUnknownFace = false;
+    unknownFaceSamples = [];
+    ws && ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify({
+      type:'face_identity',
+      person:p,
+      thermal:patientThermalPayload()
+    }));
+    return;
+  }
+
+  if (face.status === 'unknown') {
+    addUnknownFaceSample(face);
+    const needed = Number(face.min_samples || FACE_MIN_SAMPLES);
+    const sampleText = `Yaxshi yuz kadrlari: ${Math.min(unknownFaceSamples.length, needed)}/${needed}`;
+    setFaceUi('unknown', null, sampleText);
+    enableLiveConversation();
+    activeKnownPersonId = null;
+    pendingUnknownFace = true;
+    ws && ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify({
+      type:'face_identity',
+      person:null,
+      thermal:patientThermalPayload(),
+      pending_registration:{
+        embedding:face.embedding,
+        snapshot_path:face.snapshot_path,
+        quality:face.quality || {},
+        samples:unknownFaceSamples,
+        min_samples:needed
+      }
+    }));
+    return;
+  }
+
+  setFaceUi('empty');
+}
+
+async function resetFaceId() {
+  if (!confirm('Reset all Face ID data? This removes registered faces, face vectors, and saved Face ID images.')) return;
+  const btn = document.getElementById('face-reset-btn');
+  const oldText = btn ? btn.textContent : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Resetting...';
+  }
+  try {
+    const res = await fetch('/api/faces/reset', {method:'POST'});
+    const data = await res.json();
+    if (!data.ok) throw new Error((data.errors || []).join('; ') || 'Reset failed');
+    if (faceCamSt) { faceCamSt.getTracks().forEach(t=>t.stop()); faceCamSt=null; }
+    faceEnabled = false;
+    const toggle = document.getElementById('tgl-face');
+    if (toggle) toggle.checked = false;
+    facePresent = false;
+    lastDetectedFaceCount = 0;
+    activeKnownPersonId = null;
+    pendingUnknownFace = false;
+    unknownFaceSamples = [];
+    drawFaceBoxes([]);
+    document.getElementById('cam-live').style.display='none';
+    setFaceUi('standby');
+    patientsLoaded = false;
+    allPatients = [];
+    selectedPatientId = null;
+    if (document.getElementById('page-patients')?.classList.contains('active')) loadPatients(true);
+    alert('Face ID reset complete.');
+  } catch(e) {
+    alert('Face ID reset failed: ' + (e.message || e));
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = oldText || 'Reset';
+    }
+  }
+}
+
+document.getElementById('tgl-face').addEventListener('change', async function() {
+  faceEnabled = this.checked;
+  if (faceEnabled) {
+    try {
+      setFaceUi('scanning');
+      faceCamSt = await navigator.mediaDevices.getUserMedia({ video:{width:640,height:480} });
+      const vid = document.getElementById('face-video');
+      vid.srcObject = faceCamSt; vid.play();
+      const cvs = document.getElementById('face-canvas');
+      vid.addEventListener('loadedmetadata',()=>{ cvs.width=vid.videoWidth; cvs.height=vid.videoHeight; });
+      document.getElementById('cam-live').style.display='block';
+      initLocalFaceDetector();
+      detectFace();
+    } catch(e) {
+      setFaceUi('error', null, 'Camera: ' + e.message);
+      alert('Camera: '+e.message);
+      this.checked=false;
+      faceEnabled=false;
+    }
+  } else {
+    if (faceCamSt) { faceCamSt.getTracks().forEach(t=>t.stop()); faceCamSt=null; }
+    document.getElementById('cam-live').style.display='none';
+    facePresent = false;
+    lastDetectedFaceCount = 0;
+    activeKnownPersonId = null;
+    pendingUnknownFace = false;
+    unknownFaceSamples = [];
+    drawFaceBoxes([]);
+    setFaceUi('standby');
+  }
+});
+
+function captureFaceFrameB64() {
+  const vid = document.getElementById('face-video');
+  const cvs = document.createElement('canvas');
+  cvs.width = vid.videoWidth || 640;
+  cvs.height = vid.videoHeight || 480;
+  cvs.getContext('2d').drawImage(vid, 0, 0);
+  return cvs.toDataURL('image/jpeg', .78);
+}
+
+// Heavy path: local InsightFace embedding + local Qdrant. No cloud API.
+async function runFaceIdentify(b64, selectedFace=null) {
+  if (identifyInFlight) return;
+  identifyInFlight = true;
+  lastFaceIdentifyAt = Date.now();
+  try {
+    const facePayload = {image: b64};
+    if (selectedFace) {
+      facePayload.selected_face = selectedFace;
+      facePayload.client_detected = true;
+    }
+    const res = await fetch('/api/faces/identify-local', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({faces: [facePayload]})
+    });
+    const data = await res.json();
+    const face = (data.faces || [])[0];
+    if (face) notifyFaceIdentity(face);
+  } catch(e) {
+    console.warn('Face identify error:', e);
+  } finally {
+    identifyInFlight = false;
+  }
+}
+
+// Fast path: browser-local face detection only. No server round-trip.
+// It keeps boxes responsive and triggers the heavy identify in the background when due.
+async function detectFace() {
+  if (!faceEnabled) return;
+  const b64 = captureFaceFrameB64();
+  try {
+    const boxes = await detectFacesLocal();
+    const selected = boxes[0] || null;
+    drawFaceBoxes(boxes, selected);
+    if (selected) {
+      facePresent = true;
+      lastFaceSeenAt = Date.now();
+      lastDetectedFaceCount = 1;
+      if (Date.now() - lastFaceIdentifyAt > FACE_IDENTIFY_COOLDOWN_MS && !identifyInFlight) {
+        runFaceIdentify(b64, selected);   // fire-and-forget, does not block box updates
+      }
+    } else {
+      if (localFaceDetectorStatus === 'unsupported' && Date.now() - lastFaceIdentifyAt > FACE_IDENTIFY_COOLDOWN_MS && !identifyInFlight) {
+        runFaceIdentify(b64, null);
+      }
+      notifyFaceIdentity({status: 'no_face', faces: []});
+    }
+  } catch(e) {
+    console.warn('Local face detect loop error:', e);
+  }
+  if (faceEnabled) faceLoopTimer = setTimeout(detectFace, FACE_DETECT_INTERVAL_MS);
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+//  ROBOT — Serial ports
+// ═══════════════════════════════════════════════════════════════
+const DEVS = ['hand','head','move'];
+let curSpeed = 60, headStepSize = 15, headAngle = 90, srvTimers = {};
+const robotConnected = { hand:false, head:false, move:false };
+
+async function scanPorts() {
+  const res = await fetch('/api/ports');
+  const pts = await res.json();
+  DEVS.forEach(d => {
+    const sel = document.getElementById('sel-'+d);
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">— port —</option>';
+    pts.forEach(p => {
+      const o = document.createElement('option');
+      o.value=p.device; o.textContent=`${p.device} — ${p.description}`;
+      if (p.device===cur) o.selected=true;
+      sel.appendChild(o);
+    });
+  });
+  addLog('↻ Port scan','');
+}
+
+async function autoConnect() {
+  const btn = document.getElementById('auto-connect-btn');
+  btn.disabled = true;
+  btn.textContent = 'Scanning...';
+  DEVS.forEach(clearErr);
+  try {
+    const res = await fetch('/api/auto-connect',{method:'POST'});
+    const data = await res.json();
+    DEVS.forEach(dev => {
+      if (data.status && data.status[dev]) setDev(dev, data.status[dev].connected, data.status[dev].port);
+    });
+    const found = Object.keys(data.found || {});
+    addLog(found.length ? `Auto connected: ${found.map(x=>x.toUpperCase()).join(', ')}` : 'Auto connect: no ESP32 DEVICE response', found.length ? 'ok' : 'err');
+    if (data.errors && data.errors.length) {
+      data.errors.forEach(err => addLog(`${err.port}: ${err.message}`, 'err'));
+      const busy = data.errors.find(err => /busy|Access is denied|Permission/i.test(err.message || ''));
+      if (busy && !data.status?.move?.connected) showErr('move', busy.message);
+    }
+    await scanPorts();
+  } catch(e) {
+    addLog('Auto connect failed: '+e.message,'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Auto Connect';
+  }
+}
+
+function setDev(dev,connected,port) {
+  robotConnected[dev] = !!connected;
+  const dot  = document.getElementById('dot-'+dev);
+  const lbl  = document.getElementById(dev+'-lbl');
+  const cb   = document.getElementById('con-'+dev);
+  const db   = document.getElementById('dis-'+dev);
+  const ndot = document.getElementById('nav-robot-dot');
+  if (connected) {
+    dot.className='s-dot on'; lbl.textContent='Connected · '+port;
+    cb.disabled=true; db.disabled=false;
+    clearErr(dev);
+  } else {
+    dot.className='s-dot'; lbl.textContent='Not connected';
+    cb.disabled=false; db.disabled=true;
+  }
+  const any = DEVS.some(d=>document.getElementById('dot-'+d)?.classList.contains('on'));
+  if (ndot) ndot.className='tab-dot'+(any?' online':'');
+}
+
+async function conn(dev) {
+  const port = document.getElementById('sel-'+dev).value;
+  if (!port) { showErr(dev,'Port tanlang'); return; }
+  clearErr(dev);
+  document.getElementById('con-'+dev).textContent='Connecting…';
+  const r = await fetch('/api/connect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device:dev,port})});
+  const d = await r.json();
+  if (d.ok) { setDev(dev,true,port); addLog(`✅ ${dev.toUpperCase()} ← ${port}`,'ok'); }
+  else { setDev(dev,false,null); showErr(dev,d.message); }
+  document.getElementById('con-'+dev).textContent='Connect';
+}
+async function disc(dev) {
+  await fetch('/api/disconnect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device:dev})}).catch(()=>{});
+  setDev(dev,false,null); addLog(`🔌 ${dev.toUpperCase()} uzildi`,'');
+}
+function showErr(dev,msg){ document.getElementById('err-'+dev).textContent='⚠ '+msg; }
+function clearErr(dev)   { document.getElementById('err-'+dev).textContent=''; }
+
+async function pollStatus() {
+  try {
+    const r=await fetch('/api/robot/status');
+    const d=await r.json();
+    DEVS.forEach(dev=>{ if(d[dev]) setDev(dev,d[dev].connected,d[dev].port); });
+  }catch{}
+}
+pollStatus(); setInterval(pollStatus,8000); scanPorts();
+
+
+// ── Movement ──────────────────────────────────────────────────
+let speedSendTimer = null;
+
+function spd(v){
+  curSpeed=parseInt(v);
+  document.getElementById('spd-val').textContent=v;
+  clearTimeout(speedSendTimer);
+  speedSendTimer = setTimeout(() => {
+    queueMoveCommand(`MOVE SPEED ${moveSpeedValue()}`, { log: false });
+  }, 120);
+}
+
+const moveKeyMap = {
+  w: 'MOVE BACK',
+  s: 'MOVE FWD',
+  a: 'MOVE LEFT',
+  d: 'MOVE RIGHT',
+};
+
+let activeMoveKey = null;
+let activeMoveCommand = null;
+let movePingTimer = null;
+let moveCommandQueue = Promise.resolve();
+let movePingInFlight = false;
+
+function moveSpeedValue() {
+  return Math.max(0, Math.min(100, Math.round(curSpeed)));
+}
+
+async function sendMoveCommand(full, { log = true } = {}) {
+  if (!robotConnected.move) {
+    document.getElementById('move-st').textContent = 'MOVE not connected';
+    showErr('move', 'MOVE ESP32 not connected. Close Arduino Serial Monitor, then Auto Connect or select the MOVE COM port.');
+    if (log) addLog(`${full} -> MOVE not connected`, 'err');
+    return;
+  }
+  const r = await fetch('/api/move/command',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({command:full})});
+  const d = await r.json();
+  if (!d.ok) {
+    if (log) addLog(`${full} -> ${d.response || d.message || 'MOVE error'}`, 'err');
+    document.getElementById('move-st').textContent = d.response || 'MOVE error';
+    if (!d.connected) setDev('move', false, null);
+    return;
+  }
+  const response = d.response || 'OK';
+  if (log) addLog(`${full} -> ${response}`, 'tx');
+  return d;
+}
+
+function queueMoveCommand(full, options = {}) {
+  const run = () => sendMoveCommand(full, options);
+  moveCommandQueue = moveCommandQueue.then(run, run);
+  return moveCommandQueue;
+}
+
+function startMovePing() {
+  clearInterval(movePingTimer);
+  movePingTimer = setInterval(() => {
+    if (!activeMoveCommand || movePingInFlight) return;
+    movePingInFlight = true;
+    queueMoveCommand('MOVE PING', { log: false }).finally(() => {
+      movePingInFlight = false;
+    });
+  }, 100);
+}
+
+function clearMovePing() {
+  clearInterval(movePingTimer);
+  movePingTimer = null;
+}
+
+async function startMove(cmd, sourceKey = null) {
+  if (activeMoveCommand === cmd) return;
+  if (activeMoveCommand) await stopMove();
+  activeMoveKey = sourceKey;
+  activeMoveCommand = cmd;
+  document.getElementById('move-st').textContent = `▶ ${cmd.split(' ')[1]}`;
+  await queueMoveCommand(`MOVE SPEED ${moveSpeedValue()}`, { log: false });
+  const d = await queueMoveCommand(cmd);
+  if (!d || !d.ok) {
+    activeMoveKey = null;
+    activeMoveCommand = null;
+    clearMovePing();
+    return;
+  }
+  if (activeMoveCommand === cmd) {
+    startMovePing();
+    document.getElementById('move-st').textContent = `▶ ${cmd.split(' ')[1]} · ${d.response || 'OK'}`;
+  }
+}
+
+async function stopMove() {
+  clearMovePing();
+  activeMoveKey = null;
+  activeMoveCommand = null;
+  const d = await queueMoveCommand('MOVE STOP');
+  document.getElementById('move-st').textContent = `■ ${d?.response || 'STOP'}`;
+}
+
+async function mc(cmd) {
+  if (cmd === 'MOVE STOP') return stopMove();
+  return startMove(cmd);
+}
+
+document.querySelectorAll('.dp[data-cmd]').forEach(btn=>{
+  const cmd = btn.getAttribute('data-cmd');
+  btn.addEventListener('pointerdown', e=>{ e.preventDefault(); btn.setPointerCapture?.(e.pointerId); startMove(cmd); });
+  btn.addEventListener('pointerup',   e=>{ e.preventDefault(); stopMove(); });
+  btn.addEventListener('pointercancel', stopMove);
+  btn.addEventListener('pointerleave', stopMove);
+});
+
+document.addEventListener('keydown',e=>{
+  const k=e.key.toLowerCase();
+  if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
+  if (k===' '){ e.preventDefault(); stopMove(); return; }
+  const cmd = moveKeyMap[k];
+  if (!cmd) return;
+  e.preventDefault();
+  if (activeMoveKey === k) return;
+  startMove(cmd, k);
+});
+document.addEventListener('keyup',e=>{
+  const k=e.key.toLowerCase();
+  if (moveKeyMap[k] && activeMoveKey === k) {
+    e.preventDefault();
+    stopMove();
+  }
+});
+
+
+// ── Head ──────────────────────────────────────────────────────
+function hs(num,angle) {
+  headSend(`HEAD SERVO ${angle}`, `HEAD SERVO ${angle}`);
+}
+
+function headGaugePoint(angle, radius=84) {
+  const clamped = Math.max(0, Math.min(180, parseInt(angle || 0)));
+  const theta = (180 - clamped) * Math.PI / 180;
+  return {
+    x: 130 + Math.cos(theta) * radius,
+    y: 112 - Math.sin(theta) * radius
+  };
+}
+
+function initHeadGauge() {
+  const ticks = document.getElementById('head-gauge-ticks');
+  if (!ticks || ticks.dataset.ready) return;
+  ticks.dataset.ready = '1';
+
+  for (let angle = 0; angle <= 180; angle += 10) {
+    const major = angle % 30 === 0;
+    const outer = headGaugePoint(angle, 104);
+    const inner = headGaugePoint(angle, major ? 88 : 94);
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', outer.x.toFixed(1));
+    line.setAttribute('y1', outer.y.toFixed(1));
+    line.setAttribute('x2', inner.x.toFixed(1));
+    line.setAttribute('y2', inner.y.toFixed(1));
+    line.setAttribute('class', major ? 'tick tick-major' : 'tick');
+    ticks.appendChild(line);
+
+    if (angle % 10 === 0) {
+      const labelPoint = headGaugePoint(angle, major ? 73 : 77);
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', labelPoint.x.toFixed(1));
+      text.setAttribute('y', labelPoint.y.toFixed(1));
+      text.setAttribute('class', 'tick-label');
+      text.textContent = angle;
+      ticks.appendChild(text);
+    }
+  }
+
+  const gauge = document.getElementById('head-gauge');
+  let dragging = false;
+  const updateFromPointer = async (event, send=false) => {
+    const svg = document.getElementById('head-gauge-svg');
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const x = ((event.clientX - rect.left) / rect.width) * 260;
+    const y = ((event.clientY - rect.top) / rect.height) * 128;
+    const dx = x - 130;
+    const dy = 112 - y;
+    if (dy < -8) return;
+    const angle = Math.round(180 - (Math.atan2(dy, dx) * 180 / Math.PI));
+    setHeadAngleUi(angle, 'Angle');
+    if (send) await headSend(`HEAD SERVO ${headAngle}`);
+  };
+
+  gauge?.addEventListener('pointerdown', (event) => {
+    dragging = true;
+    gauge.setPointerCapture?.(event.pointerId);
+    updateFromPointer(event, true);
+  });
+  gauge?.addEventListener('pointermove', (event) => {
+    if (dragging) updateFromPointer(event, false);
+  });
+  gauge?.addEventListener('pointerup', async (event) => {
+    if (!dragging) return;
+    dragging = false;
+    gauge.releasePointerCapture?.(event.pointerId);
+    await updateFromPointer(event, true);
+  });
+  gauge?.addEventListener('pointercancel', () => { dragging = false; });
+}
+
+function setHeadAngleUi(value, label='Angle') {
+  headAngle = Math.max(0, Math.min(180, parseInt(value || 90)));
+  document.getElementById('head-raw-val').textContent = headAngle;
+  const raw = document.getElementById('head-angle-slider') || document.querySelector('input[oninput="headRaw(this.value)"]');
+  if (raw) raw.value = headAngle;
+  const st = document.getElementById('head-st');
+  if (st) st.textContent = `${label} ${headAngle}\u00B0`;
+  const gaugeValue = document.getElementById('head-gauge-value');
+  if (gaugeValue) gaugeValue.textContent = `${headAngle}\u00B0`;
+  const tip = headGaugePoint(headAngle, 84);
+  const needle = document.getElementById('head-gauge-needle');
+  const dot = document.getElementById('head-gauge-tip');
+  if (needle) {
+    needle.setAttribute('x2', tip.x.toFixed(1));
+    needle.setAttribute('y2', tip.y.toFixed(1));
+  }
+  if (dot) {
+    dot.setAttribute('cx', tip.x.toFixed(1));
+    dot.setAttribute('cy', tip.y.toFixed(1));
+  }
+}
+
+function headSetStep(value) {
+  headStepSize = Math.max(1, Math.min(45, parseInt(value || 15)));
+  document.getElementById('head-speed-val').textContent = headStepSize;
+}
+
+async function headNeutral(value) {
+  document.getElementById('head-neutral-val').textContent = value;
+  setHeadAngleUi(value, 'Center');
+  await headSend(`HEAD SERVO ${headAngle}`);
+}
+
+async function headRaw(value) {
+  setHeadAngleUi(value);
+  await headSend(`HEAD SERVO ${headAngle}`);
+}
+
+async function headSend(cmd, label=cmd) {
+  const r = await fetch('/api/head/command',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({command:cmd})});
+  const data = await r.json();
+  addLog(label, data.ok ? 'tx' : 'err');
+  return data;
+}
+
+async function headStep(dir) {
+  const next = dir === 'LEFT' ? headAngle - headStepSize : headAngle + headStepSize;
+  setHeadAngleUi(next, dir === 'LEFT' ? 'Left' : 'Right');
+  await headSend(`HEAD SERVO ${headAngle}`);
+}
+
+async function headCenter() {
+  const center = parseInt(document.getElementById('head-neutral-val')?.textContent || 90);
+  setHeadAngleUi(center, 'Center');
+  await headSend(`HEAD SERVO ${headAngle}`);
+}
+
+
+// ── LED ───────────────────────────────────────────────────────
+async function led(r,g,b){
+  const cmd=`HEAD LED ${r} ${g} ${b}`;
+  const res=await fetch('/api/head/command',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({command:cmd})});
+  addLog(cmd,(await res.json()).ok?'tx':'err');
+}
+async function ledBrightness(value){
+  document.getElementById('led-bright-val').textContent=value;
+  const cmd=`HEAD BRIGHTNESS ${value}`;
+  const res=await fetch('/api/head/command',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({command:cmd})});
+  addLog(cmd,(await res.json()).ok?'tx':'err');
+}
+async function ledOff(){
+  const r=await fetch('/api/head/command',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({command:'HEAD LED_OFF'})});
+  addLog('HEAD LED_OFF',(await r.json()).ok?'tx':'err');
+}
+async function ledRain(){
+  const r=await fetch('/api/head/command',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({command:'HEAD RAINBOW'})});
+  addLog('HEAD RAINBOW',(await r.json()).ok?'tx':'err');
+}
+function sendLedPick(){
+  const h=document.getElementById('led-pick').value;
+  led(parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16));
+}
+
+
+// ── Hand sliders ──────────────────────────────────────────────
+const SNAMES=['Wrist Rot','Forearm','Elbow','Shoulder','Fingers','Thumb'];
+const HDEFS ={R:[90,180,90,0,0,0], L:[100,0,90,0,180,90]};
+const HLIMS ={
+  R:[[90,180],[0,180],[90,180],[0,180],[0,110],[0,110]],
+  L:[[0,100],[0,90],[0,90],[0,180],[60,180],[0,90]]
+};
+const AUTO_HOME_DELAY_MS = 20000;
+let autoHomeTimer = null;
+
+function clampHandAngle(side,num,angle){
+  const [mn,mx]=HLIMS[side][num-1];
+  return Math.max(mn, Math.min(mx, parseInt(angle)));
+}
+
+function anglePoint(angle,r=92){
+  const rad=-angle*Math.PI/180;
+  return {x:120 + r*Math.cos(rad), y:110 + r*Math.sin(rad)};
+}
+
+function arcPath(min,max,r=78){
+  const a=anglePoint(min,r);
+  const b=anglePoint(max,r);
+  const large=max-min>180 ? 1 : 0;
+  return `M ${a.x.toFixed(2)} ${a.y.toFixed(2)} A ${r} ${r} 0 ${large} 0 ${b.x.toFixed(2)} ${b.y.toFixed(2)}`;
+}
+
+function protractorTicks(min,max){
+  let html='';
+  for(let angle=0; angle<=180; angle+=10){
+    const outside=angle<min || angle>max;
+    const outer=anglePoint(angle,96);
+    const inner=anglePoint(angle,angle%30===0 ? 82 : 87);
+    const label=anglePoint(angle,70);
+    html+=`<line class="pro-tick ${outside?'dim':''}" x1="${outer.x.toFixed(1)}" y1="${outer.y.toFixed(1)}" x2="${inner.x.toFixed(1)}" y2="${inner.y.toFixed(1)}"></line>`;
+    html+=`<text class="pro-label ${outside?'dim':''}" x="${label.x.toFixed(1)}" y="${label.y.toFixed(1)}">${angle}</text>`;
+  }
+  return html;
+}
+
+function protractorSvg(id,angle,min,max){
+  const p=anglePoint(angle,74);
+  return `
+    <svg viewBox="0 0 240 128" aria-label="Servo angle protractor">
+      <path class="pro-arc" d="${arcPath(0,180,96)}"></path>
+      <path class="pro-range" d="${arcPath(min,max,78)}"></path>
+      ${protractorTicks(min,max)}
+      <line class="pro-base" x1="24" y1="110" x2="216" y2="110"></line>
+      <line class="pro-needle" id="${id}needle" x1="120" y1="110" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}"></line>
+      <circle class="pro-dot" id="${id}dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5"></circle>
+      <circle class="pro-center" cx="120" cy="110" r="5"></circle>
+    </svg>`;
+}
+
+function setHandVisual(id,angle){
+  const value=document.getElementById(id+'v');
+  if(value) value.textContent=`${angle}°`;
+  const p=anglePoint(angle,74);
+  const needle=document.getElementById(id+'needle');
+  const dot=document.getElementById(id+'dot');
+  if(needle){
+    needle.setAttribute('x2',p.x.toFixed(1));
+    needle.setAttribute('y2',p.y.toFixed(1));
+  }
+  if(dot){
+    dot.setAttribute('cx',p.x.toFixed(1));
+    dot.setAttribute('cy',p.y.toFixed(1));
+  }
+}
+
+function angleFromProtractor(event,side,num){
+  const rect=event.currentTarget.getBoundingClientRect();
+  const x=(event.clientX-rect.left)*240/rect.width;
+  const y=(event.clientY-rect.top)*128/rect.height;
+  let angle=Math.atan2(110-y,x-120)*180/Math.PI;
+  angle=Math.max(0,Math.min(180,Math.round(angle/10)*10));
+  return clampHandAngle(side,num,angle);
+}
+
+function handProtractorPointer(event,side,num,id){
+  if(event.type==='pointermove' && !(event.buttons&1)) return;
+  event.preventDefault();
+  try { event.currentTarget.setPointerCapture?.(event.pointerId); } catch {}
+  handSrv(side,num,angleFromProtractor(event,side,num),id);
+}
+
+function buildHand(id,side){
+  const el=document.getElementById(id);
+  const df=HDEFS[side];
+  const limits=HLIMS[side];
+  el.innerHTML='';
+  for(let i=1;i<=6;i++){
+    const k=`${side}${i}`;
+    const [mn,mx]=limits[i-1];
+    el.innerHTML+=`
+      <div class="hand-row">
+        <div class="hand-meta">
+          <span class="srv-lbl">${side}${i} ${SNAMES[i-1]}<span class="srv-limit">${df[i-1]} home · ${mn}-${mx}</span></span>
+          <span class="hand-degree" id="${k}v">${df[i-1]}°</span>
+        </div>
+        <div class="hand-protractor" id="${k}p"
+          onpointerdown="handProtractorPointer(event,'${side}',${i},'${k}')"
+          onpointermove="handProtractorPointer(event,'${side}',${i},'${k}')">
+          ${protractorSvg(k,df[i-1],mn,mx)}
+        </div>
+      </div>`;
+  }
+}
+buildHand('rhand','R'); buildHand('lhand','L');
+
+async function handSrv(side,num,angle,id){
+  angle=clampHandAngle(side,num,angle);
+  setHandVisual(id,angle);
+  clearTimeout(srvTimers[id]);
+  srvTimers[id]=setTimeout(async()=>{
+    const r=await fetch('/api/hand/move',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({hand:side,servo:num,angle:parseInt(angle)})});
+    const d=await r.json();
+    addLog(`${side} ${num} ${angle}`,d.ok?'tx':'err');
+  },120);
+}
+
+async function applyHandAngles(side,angles,label){
+  for(let i=1;i<=6;i++){
+    const k=`${side}${i}`;
+    const angle=clampHandAngle(side,i,angles[i-1]);
+    setHandVisual(k,angle);
+    await fetch('/api/hand/move',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({hand:side,servo:i,angle})});
+    await new Promise(r=>setTimeout(r,60));
+  }
+  addLog(`${side} ${label}`,'ok');
+}
+
+function clearAutoHome(){
+  if(autoHomeTimer){
+    clearTimeout(autoHomeTimer);
+    autoHomeTimer=null;
+  }
+}
+
+function scheduleAutoHome(label='auto home'){
+  clearAutoHome();
+  autoHomeTimer=setTimeout(async()=>{
+    autoHomeTimer=null;
+    await homeAllHands(label);
+  }, AUTO_HOME_DELAY_MS);
+  addLog('auto home in 20s','');
+}
+
+async function homeHand(side){
+  clearAutoHome();
+  await applyHandAngles(side,HDEFS[side],'home');
+}
+
+async function homeAllHands(label='home'){
+  clearAutoHome();
+  await applyHandAngles('R',HDEFS.R,label);
+  await applyHandAngles('L',HDEFS.L,label);
+}
+
+async function preset(side,type){
+  const angles = type==='open'
+    ? HDEFS[side]
+    : (side==='R'?[180,0,180,180,110,110] :[0,90,0,180,60,0]);
+  await applyHandAngles(side,angles,type);
+  scheduleAutoHome();
+}
+
+
+// ── Gestures ─────────────────────────────────────────────────
+const CUSTOM_GESTURES_KEY = 'uzmax_custom_gestures_v1';
+
+function getCustomGestures(){
+  try { return JSON.parse(localStorage.getItem(CUSTOM_GESTURES_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function setCustomGestures(items){
+  localStorage.setItem(CUSTOM_GESTURES_KEY, JSON.stringify(items));
+}
+
+function parseGestureLine(line){
+  const cmd = line.trim();
+  if (!cmd || cmd.startsWith('#')) return null;
+  const parts = cmd.split(/\s+/);
+  const first = parts[0].toUpperCase();
+  if (first === 'WAIT' || first === 'DELAY') return { wait:Math.max(0, parseInt(parts[1] || '250')) };
+  if ((first === 'R' || first === 'L') && parts.length >= 3) return { e:'/api/hand/move', b:{hand:first, servo:parseInt(parts[1]), angle:parseInt(parts[2])}, label:cmd };
+  if (first === 'HEAD') return { e:'/api/head/command', b:{command:cmd}, label:cmd };
+  if (first === 'MOVE') return { e:'/api/move/command', b:{command:cmd.toUpperCase()}, label:cmd.toUpperCase() };
+  throw new Error('Unknown gesture command: ' + cmd);
+}
+
+function parseGestureCommands(text){
+  return text.split(/\r?\n/).map(parseGestureLine).filter(Boolean);
+}
+
+async function runGestureSteps(steps, label){
+  for (const step of steps) {
+    if (step.wait !== undefined) {
+      await new Promise(r=>setTimeout(r, step.wait));
+      continue;
+    }
+    const res = await fetch(step.e,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(step.b)});
+    const data = await res.json().catch(()=>({ok:false}));
+    addLog(step.label || label, data.ok ? 'tx' : 'err');
+    await new Promise(r=>setTimeout(r,100));
+  }
+}
+
+async function gesture(name){
+  const acts={
+    hello:[ {e:'/api/head/command',b:{command:'HEAD SERVO 60'}}, {wait:250}, {e:'/api/head/command',b:{command:'HEAD SERVO 90'}}, {e:'/api/hand/move',b:{hand:'R',servo:1,angle:90}}, {e:'/api/hand/move',b:{hand:'R',servo:2,angle:120}} ],
+    open: [ {e:'/api/hand/move',b:{hand:'R',servo:1,angle:90}}, {e:'/api/hand/move',b:{hand:'R',servo:2,angle:180}}, {e:'/api/hand/move',b:{hand:'L',servo:1,angle:100}}, {e:'/api/hand/move',b:{hand:'L',servo:2,angle:0}} ],
+    fist: [ ...[1,2,3,4,5,6].map(s=>({e:'/api/hand/move',b:{hand:'R',servo:s,angle:0}})), ...[1,2,3,4,5,6].map(s=>({e:'/api/hand/move',b:{hand:'L',servo:s,angle:0}})) ],
+    wave: [ {e:'/api/hand/move',b:{hand:'R',servo:1,angle:30}} ],
+    nod:  [ {e:'/api/head/command',b:{command:'HEAD SERVO 75'}}, {wait:180}, {e:'/api/head/command',b:{command:'HEAD SERVO 105'}}, {wait:180}, {e:'/api/head/command',b:{command:'HEAD SERVO 90'}} ],
+  };
+  await runGestureSteps((acts[name]||[]).map(s=>({...s,label:name})), name);
+  addLog('gesture: '+name,'ok');
+  scheduleAutoHome();
+}
+
+function renderCustomGestures(){
+  const box = document.getElementById('custom-gestures');
+  if (!box) return;
+  const gestures = getCustomGestures();
+  box.innerHTML = '';
+  gestures.forEach((g, idx)=>{
+    const wrap = document.createElement('span');
+    wrap.className = 'gesture-chip';
+    const run = document.createElement('button');
+    run.className = 'btn btn-ghost';
+    run.textContent = g.name;
+    run.onclick = () => runCustomGesture(idx);
+    const del = document.createElement('button');
+    del.className = 'btn btn-ghost gesture-del';
+    del.title = 'Delete gesture';
+    del.textContent = 'x';
+    del.onclick = () => deleteCustomGesture(idx);
+    wrap.appendChild(run);
+    wrap.appendChild(del);
+    box.appendChild(wrap);
+  });
+}
+
+function saveCustomGesture(){
+  const nameEl = document.getElementById('gesture-name');
+  const commandsEl = document.getElementById('gesture-commands');
+  const name = nameEl.value.trim();
+  const commands = commandsEl.value.trim();
+  if (!name) { addLog('Gesture name required','err'); return; }
+  if (!commands) { addLog('Gesture commands required','err'); return; }
+  try { parseGestureCommands(commands); }
+  catch(e) { addLog(e.message,'err'); return; }
+  const gestures = getCustomGestures();
+  const existing = gestures.findIndex(g=>g.name.toLowerCase()===name.toLowerCase());
+  const item = { name, commands };
+  if (existing >= 0) gestures[existing] = item;
+  else gestures.push(item);
+  setCustomGestures(gestures);
+  nameEl.value = '';
+  commandsEl.value = '';
+  renderCustomGestures();
+  addLog('saved gesture: '+name,'ok');
+}
+
+async function runCustomGesture(index){
+  const item = getCustomGestures()[index];
+  if (!item) return;
+  try {
+    await runGestureSteps(parseGestureCommands(item.commands), item.name);
+    addLog('gesture: '+item.name,'ok');
+    scheduleAutoHome();
+  } catch(e) {
+    addLog(e.message,'err');
+  }
+}
+
+function deleteCustomGesture(index){
+  const gestures = getCustomGestures();
+  const removed = gestures.splice(index,1)[0];
+  setCustomGestures(gestures);
+  renderCustomGestures();
+  if (removed) addLog('deleted gesture: '+removed.name,'');
+}
+
+
+// ── Raw terminal ──────────────────────────────────────────────
+async function rawSend(){
+  const dev=document.getElementById('raw-dev').value;
+  const cmd=document.getElementById('raw-in').value.trim();
+  if (!cmd) return;
+
+  let ep='/api/raw', body={device:dev,command:cmd};
+  if (dev==='hand'){
+    const p=cmd.trim().split(/\s+/);
+    if (p.length>=3){
+      ep='/api/hand/move';
+      body={hand:p[0].toUpperCase(),servo:parseInt(p[1]),angle:parseInt(p[2])};
+    }
+  } else if (dev==='head'){
+    ep='/api/head/command'; body={command:cmd};
+  } else {
+    ep='/api/move/command'; body={command:cmd.toUpperCase()};
+  }
+
+  const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const d=await r.json();
+  addLog(`[${dev.toUpperCase()}] ${cmd} → ${d.response||''}`,d.ok?'tx':'err');
+  document.getElementById('raw-in').value='';
+}
+
+
+// ── Log ───────────────────────────────────────────────────────
+function addLog(msg,type){
+  const box=document.getElementById('log-box');
+  const d=document.createElement('div');
+  d.className=type==='ok'?'l-ok':type==='err'?'l-err':type==='tx'?'l-tx':'';
+  d.textContent=new Date().toLocaleTimeString('uz')+'  '+msg;
+  box.appendChild(d);
+  box.scrollTop=box.scrollHeight;
+  while(box.children.length>80) box.removeChild(box.firstChild);
+}
+function clrLog(){ document.getElementById('log-box').innerHTML=''; }
+
+
+// ── BOOT ─────────────────────────────────────────────────────
+wsInit();
+updateDateVitals();
+setInterval(updateDateVitals, 1000);
+updateTempVitals(null);
+updatePersonVitals('', 'Camera standby');
+initHeadGauge();
+setHeadAngleUi(90, 'Angle');
+initThermalState();
+buildSettingsUI();
+loadSettings();
+renderCustomGestures();
+</script>
+</body>
+</html>

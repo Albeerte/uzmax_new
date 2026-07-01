@@ -1,0 +1,44 @@
+# ── Python ──────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.so
+
+# ── Virtual environments ────────────────────────────────
+venv/
+.venv/
+env/
+ENV/
+
+# ── Secrets / environment ───────────────────────────────
+.env
+*.env
+!*.example.env
+
+# ── TLS certificates (self-signed, local only) ──────────
+certs/
+
+# ── OS / editor cruft ───────────────────────────────────
+.DS_Store
+.idea/
+.vscode/
+
+# ── Runtime data (face vectors, DB, queues, snapshots) ──
+# Keep the directory layout/examples, ignore generated state.
+data/faces/
+data/register_faces/*
+!data/register_faces/registry.example.json
+uzmax_server/data/faces/
+uzmax_server/data/insightface/
+uzmax_server/data/hospital_robot.db
+uzmax_server/data/doctor_queue.json
+uzmax_server/data/*.bak
+uzmax_server/data/register_faces/*
+!uzmax_server/data/register_faces/registry.example.json
+images/
+uzmax_server/images/
+
+# ── Firmware build temp (arduino-cli) ───────────────────
+firmware_tmp/
+
+# ── Claude Code working file ────────────────────────────
+/CLAUDE.md

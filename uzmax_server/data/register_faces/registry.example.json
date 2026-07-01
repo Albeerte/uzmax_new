@@ -1,0 +1,36 @@
+{
+  "faces": [
+    {
+      "person_id": "person-alisher-001",
+      "file": "1.png",
+      "first_name": "Алишер",
+      "last_name": "Каримов",
+      "metadata": {
+        "phone": "+998901234567",
+        "notes": "Постоянный клиент, предпочитает общение на русском",
+        "language": "ru-RU",
+        "tags": ["vip", "returning"]
+      }
+    },
+    {
+      "person_id": "person-madina-002",
+      "file": "2.png",
+      "first_name": "Madina",
+      "last_name": "Yuldasheva",
+      "metadata": {
+        "language": "uz-UZ",
+        "notes": "Лучше обращаться по имени"
+      }
+    },
+        {
+      "person_id": "person-sherzod-001",
+      "file": "1.png",
+      "first_name": "Sherzod Xatamovich",
+      "last_name": "Shermatov",
+      "metadata": {
+        "info": "Sherzod Khotamovich Shermatov was born on April 7, 1977, in Tashkent. From 2018 to 2021, he served as the Minister of Public Education of the Republic of Uzbekistan. From November 17, 2021, to December 30, 2022, he served as the Minister for the Development of Information Technologies and Communications. On December 30, 2022, he was appointed Minister of Digital Technologies of the Republic of Uzbekistan.\n\nIn 2017–2018, he acted as the Minister for the Development of Information Technologies and Communications of the Republic of Uzbekistan. In 2018, for a short period, he worked as Deputy Minister of Innovative Development of the Republic of Uzbekistan. From 2018 to 2021, he served as the Minister of Public Education of the Republic of Uzbekistan, and since 2021, he has been serving as the Minister for the Development of Information Technologies and Communications of the Republic of Uzbekistan.",
+        "notes": "apply officially Sherzod Xatamovich, He is our esteemed guest."
+      }
+    }
+  ]
+}
