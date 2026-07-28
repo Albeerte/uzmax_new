@@ -221,8 +221,12 @@ class YandexSttSession:
                      _time.perf_counter() - t, len(pcm) / (self._sr * 2), self._lang, (text or "")[:80])
         return text or ""
 
-import yandex.cloud.ai.stt.v2.stt_service_pb2 as stt_pb2_v2
-import yandex.cloud.ai.stt.v2.stt_service_pb2_grpc as stt_pb2_grpc_v2
+try:
+    import yandex.cloud.ai.stt.v2.stt_service_pb2 as stt_pb2_v2
+    import yandex.cloud.ai.stt.v2.stt_service_pb2_grpc as stt_pb2_grpc_v2
+except Exception as _exc:
+    stt_pb2_v2 = None
+    stt_pb2_grpc_v2 = None
 
 
 class YandexSpeechRecognizer:

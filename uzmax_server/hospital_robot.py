@@ -375,7 +375,7 @@ def camera_check(data: CameraRequest):
     return {
         "human_seen": True,
         "reply": (
-            "Assalomu alaykum! Men UZMAX robot yordamchisiman. "
+            "Assalomu alaykum! Men yuqumli kasalliklar shifoxonasi uchun RoboMed robotiman. "
             "Iltimos, ism va familiyangizni ayting."
         ),
     }

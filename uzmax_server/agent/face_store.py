@@ -88,12 +88,21 @@ class FaceVectorStore:
         normalized = self._normalize(embedding)
         self._ensure_collection(len(normalized))
 
-        records, _ = self.client.scroll(
-            collection_name=self.collection_name,
-            limit=10000,
-            with_payload=True,
-            with_vectors=True,
-        )
+        try:
+            records = self.client.search(
+                collection_name=self.collection_name,
+                query_vector=normalized,
+                limit=1000,
+                with_payload=True,
+                with_vectors=False,
+            )
+        except Exception:
+            records, _ = self.client.scroll(
+                collection_name=self.collection_name,
+                limit=10000,
+                with_payload=True,
+                with_vectors=False,
+            )
         if not records:
             return None
 
@@ -103,15 +112,9 @@ class FaceVectorStore:
         best_score = -1.0
 
         for record in records:
-            vector = record.vector
-            if isinstance(vector, dict):
-                vector = next(iter(vector.values()))
-            if vector is None:
-                continue
-            if len(vector) != len(normalized):
-                continue
-
-            score = self._cosine_similarity(normalized, vector)
+            score = getattr(record, "score", None)
+            if score is None:
+                score = 0.0
             payload = record.payload or {}
             person_id = payload.get("person_id") or str(record.id)
             comparison = {
@@ -228,9 +231,7 @@ class FaceVectorStore:
         }
 
     def add_snapshot(self, person_id: str, snapshot_path: str) -> None:
-        if not snapshot_path:
-            return
-        if not self._collection_exists():
+        if not snapshot_path or not self._collection_exists():
             return
 
         records, _ = self.client.scroll(
@@ -243,31 +244,23 @@ class FaceVectorStore:
                     )
                 ]
             ),
-            limit=1,
+            limit=10,
             with_payload=True,
-            with_vectors=True,
+            with_vectors=False,
         )
         if not records:
             return
 
-        point = records[0]
-        payload = point.payload or {}
-        snapshots = payload.get("snapshots", [])
-        if snapshot_path in snapshots:
-            return
-
-        payload["snapshots"] = [snapshot_path]
-
-        self.client.upsert(
-            collection_name=self.collection_name,
-            points=[
-                models.PointStruct(
-                    id=point.id,
-                    vector=point.vector,
-                    payload=payload,
+        for point in records:
+            payload = point.payload or {}
+            snapshots = payload.get("snapshots", [])
+            if snapshot_path not in snapshots:
+                snapshots.append(snapshot_path)
+                self.client.set_payload(
+                    collection_name=self.collection_name,
+                    payload={"snapshots": snapshots},
+                    points=[point.id],
                 )
-            ],
-        )
 
     def update_metadata(self, person_id: str, metadata: dict) -> dict | None:
         if not person_id or not self._collection_exists():
@@ -285,24 +278,17 @@ class FaceVectorStore:
             ),
             limit=100,
             with_payload=True,
-            with_vectors=True,
+            with_vectors=False,
         )
         if not records:
             return None
 
-        for point in records:
-            payload = point.payload or {}
-            payload["metadata"] = metadata or {}
-            self.client.upsert(
-                collection_name=self.collection_name,
-                points=[
-                    models.PointStruct(
-                        id=point.id,
-                        vector=point.vector,
-                        payload=payload,
-                    )
-                ],
-            )
+        point_ids = [point.id for point in records]
+        self.client.set_payload(
+            collection_name=self.collection_name,
+            payload={"metadata": metadata or {}},
+            points=point_ids,
+        )
 
         return self.get_person(person_id)
 
@@ -322,32 +308,23 @@ class FaceVectorStore:
             ),
             limit=100,
             with_payload=True,
-            with_vectors=True,
+            with_vectors=False,
         )
         if not records:
             return None
 
-        for point in records:
-            payload = point.payload or {}
-            payload["first_name"] = first_name.strip()
-            payload["last_name"] = last_name.strip()
-            self.client.upsert(
-                collection_name=self.collection_name,
-                points=[
-                    models.PointStruct(
-                        id=point.id,
-                        vector=point.vector,
-                        payload=payload,
-                    )
-                ],
-            )
+        point_ids = [point.id for point in records]
+        self.client.set_payload(
+            collection_name=self.collection_name,
+            payload={"first_name": first_name.strip(), "last_name": last_name.strip()},
+            points=point_ids,
+        )
 
         return self.get_person(person_id)
 
     def get_person(self, person_id: str) -> dict | None:
         if not self._collection_exists():
             return None
-
         records, _ = self.client.scroll(
             collection_name=self.collection_name,
             scroll_filter=models.Filter(

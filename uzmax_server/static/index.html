@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UzMAX — Medical AI + Robot Control</title>
+  <title>RoboMed — Medical + Robot Control</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -665,7 +665,7 @@
 <nav>
   <div class="nav-logo">
     <div class="nav-logo-dot">🤖</div>
-    UzMAX
+    RoboMed
   </div>
 
   <div class="page-tabs">
@@ -1706,6 +1706,7 @@ const SETTINGS_KEYS = [
   'YANDEX_TTS_VOICE_UZ',
   'YANDEX_TTS_VOICE_EN',
   'YANDEX_TTS_VOICE_RU',
+  'YANDEX_TTS_ROLE_UZ',
   'YANDEX_TTS_SPEED',
   'YANDEX_TTS_SAMPLE_RATE',
   'STT_PROVIDER',
@@ -1765,11 +1766,12 @@ function buildSettingsUI(){
             ${fieldHtml('FACE_MATCH_THRESHOLD','Face match threshold','0.82')}
             ${fieldHtml('FACE_MATCH_MIN_CONFIDENCE','Minimum face confidence','0.82')}
             ${fieldHtml('FACE_MATCH_MARGIN','Face ambiguity margin','0.04')}
-            ${fieldHtml('FACE_MIN_SAMPLES','Face samples to register','1')}
+            ${fieldHtml('FACE_MIN_SAMPLES','Face samples to register','3')}
             ${fieldHtml('YANDEX_TTS_VOICE','Yandex default TTS voice','yulduz')}
             ${fieldHtml('YANDEX_TTS_VOICE_UZ','Yandex Uzbek TTS voice','yulduz')}
             ${fieldHtml('YANDEX_TTS_VOICE_EN','Yandex English TTS voice','john')}
             ${fieldHtml('YANDEX_TTS_VOICE_RU','Yandex Russian TTS voice','yulduz_ru')}
+            ${fieldHtml('YANDEX_TTS_ROLE_UZ','Yandex Uzbek voice role','neutral')}
             ${fieldHtml('YANDEX_TTS_SPEED','Yandex TTS speed','1.1')}
             ${fieldHtml('YANDEX_TTS_SAMPLE_RATE','Yandex TTS sample rate','48000')}
             ${fieldHtml('STT_PROVIDER','Speech-to-text provider','yandex_stream')}
@@ -1789,9 +1791,12 @@ function buildSettingsUI(){
           ${modelRow('GPT 4o mini','OPENAI_MODEL','gpt-4o-mini','Set')}
           ${modelRow('GPT 4.1 mini','OPENAI_MODEL','gpt-4.1-mini','Set')}
           ${modelRow('GPT 4.1 nano','OPENAI_MODEL','gpt-4.1-nano','Set')}
-          ${modelRow('Uzbek female','YANDEX_TTS_VOICE','yulduz','Voice')}
-          ${modelRow('Uzbek female','YANDEX_TTS_VOICE','nigora','Voice')}
-          ${modelRow('Uzbek female','YANDEX_TTS_VOICE','zamira','Voice')}
+          ${modelRow('Uzbek v3 female','YANDEX_TTS_VOICE_UZ','yulduz','Uz voice')}
+          ${modelRow('Uzbek v3 female','YANDEX_TTS_VOICE_UZ','zamira','Uz voice')}
+          ${modelRow('Uzbek v1/v3 female','YANDEX_TTS_VOICE_UZ','nigora','Uz voice')}
+          ${modelRow('Uzbek role','YANDEX_TTS_ROLE_UZ','friendly','Role')}
+          ${modelRow('Uzbek role','YANDEX_TTS_ROLE_UZ','strict','Role')}
+          ${modelRow('Uzbek role','YANDEX_TTS_ROLE_UZ','whisper','Role')}
         </div>
       </div>
 
@@ -1851,7 +1856,7 @@ function buildSettingsUI(){
           <div class="gesture-help">
             Yandex keys power Uzbek STT/TTS. OpenAI is the chatbot LLM provider.
             Face ID runs locally with InsightFace. After saving, new chat and face requests use the updated values.
-            Uzbek TTS defaults to <code>yulduz</code>; <code>nigora</code> and <code>zamira</code> are available presets.
+            Uzbek TTS defaults to <code>yulduz</code> on SpeechKit v3. <code>zamira</code> and <code>nigora</code> are available presets.
           </div>
           <pre style="font-size:.78rem;background:var(--muted-lt);padding:12px;border-radius:8px;border:1px solid var(--border);overflow-x:auto;color:var(--text2);margin-top:10px;">RPi thermal setup:
 sudo raspi-config
@@ -1919,6 +1924,7 @@ function pickModel(key, value){
 //  WEBSOCKET — Voice AI
 // ═══════════════════════════════════════════════════════════════
 let ws = null, audioCtx = null, mediaStream = null, processor = null, micSource = null, micMuteGain = null;
+let pendingChatMessages = [];
 let isListening = false, isAgentSpeaking = false;
 let audioQ = [], playingAudio = false, currentRespId = null;
 let liveMode = false, allowInterrupt = false;
@@ -1927,6 +1933,10 @@ let llmStreamDone = false, responseTextCommitted = false;
 let activeAudioSources = [];
 let playbackNextAt = 0;
 let lastAssistantText = '';
+let browserSpeechQueue = [];
+let browserSpeechSpeaking = false;
+let browserSpeechFallbackEnabled = false;
+let receivedTtsAudioForResponse = false;
 let heardSpeech = false, speechMs = 0, silenceMs = 0, recStartedAt = 0;
 let noiseFloor = 0.005;   // adaptive ambient-noise level (EMA), calibrated per turn
 let preRoll = [];         // recent frames held until speech starts (clean clip onset)
@@ -1952,11 +1962,22 @@ function enableLiveConversation() {
   const interruptToggle = document.getElementById('tgl-interrupt');
   if (liveToggle) liveToggle.checked = true;
   if (interruptToggle) interruptToggle.checked = true;
-  ws && ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify({
+  sendChatJson({
     type:'set_settings',
     live_mode:liveMode,
     allow_interrupt:allowInterrupt
-  }));
+  });
+}
+
+function sendChatJson(payload) {
+  const message = JSON.stringify(payload);
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(message);
+    return true;
+  }
+  pendingChatMessages.push(message);
+  pendingChatMessages = pendingChatMessages.slice(-20);
+  return false;
 }
 
 function wsInit() {
@@ -1968,6 +1989,7 @@ function wsInit() {
     chatMsg('ai', '✅ Server bilan ulandi');
     ws.send(JSON.stringify({ type:'set_settings', live_mode:liveMode, allow_interrupt:allowInterrupt }));
     ws.send(JSON.stringify({ type:'set_language',  lang: document.getElementById('lang-sel').value }));
+    pendingChatMessages.splice(0).forEach(message => ws.send(message));
   };
   ws.onclose = () => { setWS(false); setTimeout(wsInit, 3000); };
   ws.onerror = () => setWS(false);
@@ -1999,6 +2021,8 @@ function wsInit() {
         ttsStreamEnded = false;
         llmStreamDone = false;
         responseTextCommitted = false;
+        receivedTtsAudioForResponse = false;
+        browserSpeechQueue = [];
         pendingAutoListen = false;
         stopAudioPlayback();
         micState('speaking');
@@ -2010,6 +2034,8 @@ function wsInit() {
         break;
       case 'tts_chunk':
         if (m.response_id === currentRespId) {
+          receivedTtsAudioForResponse = true;
+          stopBrowserSpeech();
           const raw = atob(m.audio);
           const buf = new Uint8Array(raw.length);
           for (let i=0;i<raw.length;i++) buf[i]=raw.charCodeAt(i);
@@ -2017,12 +2043,17 @@ function wsInit() {
           if (!playingAudio) playNext();
         }
         break;
+      case 'tts_text':
+        if (m.response_id === currentRespId && browserSpeechFallbackEnabled && !receivedTtsAudioForResponse) {
+          speakInBrowser(m.text || '', m.lang || 'uz-UZ');
+        }
+        break;
       case 'tts_end':
         if (m.response_id === currentRespId) {
           ttsStreamEnded = true;
           if (llmStreamDone) {
             commitAssistantText();
-            if (!playingAudio && !audioQ.length) finishAssistantPlayback();
+            if (!playingAudio && !audioQ.length && !browserSpeechSpeaking && !browserSpeechQueue.length) finishAssistantPlayback();
           }
         }
         break;
@@ -2031,7 +2062,7 @@ function wsInit() {
           if (!getStreamText() && m.text) setStreamText(m.text);
           llmStreamDone = true;
           commitAssistantText();
-          if (ttsStreamEnded && !playingAudio && !audioQ.length) finishAssistantPlayback();
+          if (ttsStreamEnded && !playingAudio && !audioQ.length && !browserSpeechSpeaking && !browserSpeechQueue.length) finishAssistantPlayback();
         }
         break;
       case 'interrupt':
@@ -2111,6 +2142,7 @@ function stopAudioPlayback() {
   audioQ = [];
   playingAudio = false;
   playbackNextAt = audioCtx ? audioCtx.currentTime : 0;
+  stopBrowserSpeech();
 }
 
 function finishAssistantPlayback() {
@@ -2135,9 +2167,60 @@ function commitAssistantText() {
 }
 
 function maybeAutoListen() {
-  if (!pendingAutoListen || !liveMode || isListening || isAgentSpeaking || playingAudio || audioQ.length) return;
+  if (!pendingAutoListen || !liveMode || isListening || isAgentSpeaking || playingAudio || audioQ.length || browserSpeechSpeaking) return;
   pendingAutoListen = false;
   startRec();
+}
+
+function browserSpeechLang(lang='uz-UZ') {
+  if (lang === 'en-US') return 'en-US';
+  if (lang === 'ru-RU') return 'ru-RU';
+  return 'uz-UZ';
+}
+
+function pickBrowserVoice(lang='uz-UZ') {
+  const voices = window.speechSynthesis?.getVoices?.() || [];
+  const exact = voices.find(v => v.lang === lang);
+  if (exact) return exact;
+  const family = lang.split('-')[0].toLowerCase();
+  return voices.find(v => (v.lang || '').toLowerCase().startsWith(family)) || null;
+}
+
+function stopBrowserSpeech() {
+  browserSpeechQueue = [];
+  browserSpeechSpeaking = false;
+  try { window.speechSynthesis?.cancel?.(); } catch {}
+}
+
+function speakInBrowser(text='', lang='uz-UZ') {
+  const clean = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!clean || !('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) return;
+  browserSpeechQueue.push({text: clean, lang: browserSpeechLang(lang)});
+  if (!browserSpeechSpeaking) playBrowserSpeechQueue();
+}
+
+function playBrowserSpeechQueue() {
+  if (!browserSpeechQueue.length) {
+    browserSpeechSpeaking = false;
+    if (ttsStreamEnded && llmStreamDone) finishAssistantPlayback();
+    return;
+  }
+  const item = browserSpeechQueue.shift();
+  const utterance = new SpeechSynthesisUtterance(item.text);
+  utterance.lang = item.lang;
+  utterance.rate = 0.95;
+  utterance.pitch = 1.0;
+  const voice = pickBrowserVoice(item.lang);
+  if (voice) utterance.voice = voice;
+  browserSpeechSpeaking = true;
+  utterance.onend = () => playBrowserSpeechQueue();
+  utterance.onerror = () => playBrowserSpeechQueue();
+  try {
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  } catch {
+    browserSpeechSpeaking = false;
+  }
 }
 
 function completeAudioSource(src) {
@@ -2693,8 +2776,8 @@ let localFaceDetector = null;
 let localFaceDetectorStatus = 'idle';
 const FACE_ABSENCE_MS = 1800;
 const FACE_DETECT_INTERVAL_MS = 300;
-const FACE_IDENTIFY_COOLDOWN_MS = 2000;
-const FACE_MIN_SAMPLES = 1;
+const FACE_IDENTIFY_COOLDOWN_MS = 700;
+const FACE_MIN_SAMPLES = 3;
 
 function setFaceUi(state, person=null, detail='') {
   const badge = document.getElementById('face-badge');
@@ -2809,11 +2892,30 @@ function normalizeLocalFaceBox(item) {
   return {x, y, w, h, area: Math.round(w * h)};
 }
 
-async function detectFacesLocal() {
+async function detectFacesLocal(b64=null) {
   initLocalFaceDetector();
   const vid = document.getElementById('face-video');
   if (!vid || !vid.videoWidth || !vid.videoHeight) return [];
-  if (localFaceDetectorStatus !== 'ready' || !localFaceDetector) return [];
+  if (localFaceDetectorStatus !== 'ready' || !localFaceDetector) {
+    if (!b64) return [];
+    try {
+      const res = await fetch('/api/faces/detect', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({image: b64})
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return (data.faces || [])
+        .map(normalizeLocalFaceBox)
+        .filter(Boolean)
+        .sort((a, b) => Number(b.area || 0) - Number(a.area || 0))
+        .slice(0, 1);
+    } catch (e) {
+      console.warn('Server face detect fallback error:', e);
+      return [];
+    }
+  }
   try {
     const detected = await localFaceDetector.detect(vid);
     return (detected || [])
@@ -2827,15 +2929,32 @@ async function detectFacesLocal() {
   }
 }
 
+function faceSampleScore(sample) {
+  const q = sample?.quality || {};
+  const area = Number(q.area || 0);
+  const width = Number(q.width || 0);
+  const blur = Number(q.blur || 0);
+  const lighting = Number(q.lighting_score ?? q.lighting ?? 0);
+  const pose = Number(q.face_pose_score ?? q.pose ?? 0);
+  return area * 0.002 + width * 0.5 + blur + lighting * 25 + pose * 25;
+}
+
+function bestUnknownFaceSample(samples=unknownFaceSamples) {
+  return [...samples].sort((a, b) => faceSampleScore(b) - faceSampleScore(a))[0] || null;
+}
+
 function addUnknownFaceSample(face) {
-  if (!face?.embedding || !face?.snapshot_path) return false;
+  if (!face?.snapshot_path) return false;
+  if (unknownFaceSamples.length >= FACE_MIN_SAMPLES) return false;
   if (unknownFaceSamples.some(sample => sample.snapshot_path === face.snapshot_path)) return false;
   unknownFaceSamples.push({
-    embedding: face.embedding,
+    embedding: face.embedding || null,
     snapshot_path: face.snapshot_path,
     quality: face.quality || {},
+    score: faceSampleScore(face),
+    captured_at: Date.now(),
   });
-  unknownFaceSamples = unknownFaceSamples.slice(-5);
+  unknownFaceSamples = unknownFaceSamples.slice(0, FACE_MIN_SAMPLES);
   return true;
 }
 
@@ -2854,7 +2973,7 @@ function notifyFaceIdentity(face) {
       unknownFaceSamples = [];
       drawFaceBoxes([]);
       setFaceUi('empty');
-      ws && ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify({type:'person_left'}));
+      sendChatJson({type:'person_left'});
     } else if (!wasPresent) {
       setFaceUi('empty');
     }
@@ -2883,34 +3002,38 @@ function notifyFaceIdentity(face) {
     activeKnownPersonId = p.person_id;
     pendingUnknownFace = false;
     unknownFaceSamples = [];
-    ws && ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify({
+    sendChatJson({
       type:'face_identity',
       person:p,
       thermal:patientThermalPayload()
-    }));
+    });
     return;
   }
 
   if (face.status === 'unknown') {
     addUnknownFaceSample(face);
     const needed = Number(face.min_samples || FACE_MIN_SAMPLES);
-    const sampleText = `Yaxshi yuz kadrlari: ${Math.min(unknownFaceSamples.length, needed)}/${needed}`;
+    const bestSample = bestUnknownFaceSample();
+    const sampleText = unknownFaceSamples.length >= needed
+      ? `${needed} ta kadr olindi. Eng sifatli rasm tanlandi.`
+      : `Yaxshi yuz kadrlari: ${Math.min(unknownFaceSamples.length, needed)}/${needed}`;
     setFaceUi('unknown', null, sampleText);
     enableLiveConversation();
     activeKnownPersonId = null;
     pendingUnknownFace = true;
-    ws && ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify({
+    sendChatJson({
       type:'face_identity',
       person:null,
       thermal:patientThermalPayload(),
       pending_registration:{
-        embedding:face.embedding,
-        snapshot_path:face.snapshot_path,
+        embedding:bestSample?.embedding || face.embedding || null,
+        snapshot_path:bestSample?.snapshot_path || face.snapshot_path,
         quality:face.quality || {},
         samples:unknownFaceSamples,
+        best_snapshot_path:bestSample?.snapshot_path || face.snapshot_path,
         min_samples:needed
       }
-    }));
+    });
     return;
   }
 
@@ -3028,7 +3151,7 @@ async function detectFace() {
   if (!faceEnabled) return;
   const b64 = captureFaceFrameB64();
   try {
-    const boxes = await detectFacesLocal();
+    const boxes = await detectFacesLocal(b64);
     const selected = boxes[0] || null;
     drawFaceBoxes(boxes, selected);
     if (selected) {

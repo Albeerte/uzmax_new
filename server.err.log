@@ -1,0 +1,275 @@
+INFO:     Started server process [21620]
+INFO:     Waiting for application startup.
+INFO:__main__:Face bootstrap done: loaded=0 skipped=0
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:50283 - "WebSocket /ws/chat" [accepted]
+INFO:     connection open
+INFO:__main__:WS /ws/chat connected
+C:\Users\Admin\Desktop\uzmax_new\uzmax_server\main.py:2759: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S_%f")
+INFO:uzmax.face_encoder:[FaceEncoder] InsightFace loaded successfully: buffalo_s
+C:\Users\Admin\Desktop\uzmax_new\.venv\Lib\site-packages\insightface\utils\face_align.py:23: FutureWarning: `estimate` is deprecated since version 0.26 and will be removed in version 2.2. Please use `SimilarityTransform.from_estimate` class constructor instead.
+  tform.estimate(lmk, dst)
+INFO:__main__:Registered face written to registry.json: person_id=857359df-be41-40b2-9278-3c7762c8c7de file=857359df-be41-40b2-9278-3c7762c8c7de_20260728_133358_198216.jpg name=CodexSmoke Registration
+C:\Users\Admin\Desktop\uzmax_new\uzmax_server\main.py:2537: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S_%f")
+INFO:     127.0.0.1:50690 - "WebSocket /ws/chat" [accepted]
+INFO:     connection open
+INFO:__main__:WS /ws/chat connected
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:root:[STT] first partial in 1.24s (rate=16000, lang=uz-UZ)
+INFO:root:[STT] done in 3.41s (first_final=3.41s) text='solajonov abduxoliq'
+INFO:__main__:[STT] end_speech -> final in 1.89s text='solajonov abduxoliq'
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:root:[STT] done in 3.23s (first_final=—) text=''
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:__main__:[STT] end_speech -> final in 2.56s text=''
+INFO:__main__:Registered face written to registry.json: person_id=fdf35c57-2bfa-461e-8a69-01e30da8abb2 file=fdf35c57-2bfa-461e-8a69-01e30da8abb2.jpg name=Abduxoliq Solijonov
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:root:[STT] done in 2.20s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 0.25s text=''
+INFO:root:[STT] done in 1.54s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 0.68s text=''
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:root:[STT] done in 1.73s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 1.73s text=''
+INFO:root:[STT] first partial in 4.20s (rate=16000, lang=uz-UZ)
+INFO:root:[STT] done in 7.30s (first_final=4.41s) text='bu baba baba baba baba baba baba baba baba baba baba baba baba baba baba baba ba'
+INFO:__main__:[STT] end_speech -> final in 4.22s text='bu baba baba baba baba baba baba baba baba baba baba baba baba baba baba baba ba'
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:root:[STT] first partial in 0.60s (rate=16000, lang=uz-UZ)
+INFO:root:[STT] done in 3.76s (first_final=1.19s) text='babalar arayacak xalqaro amaliyotda katta'
+INFO:__main__:[STT] end_speech -> final in 6.28s text='babalar arayacak xalqaro amaliyotda katta'
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:root:[STT] first partial in 0.84s (rate=16000, lang=uz-UZ)
+INFO:root:[STT] done in 3.73s (first_final=1.06s) text='hey yandex'
+INFO:__main__:[STT] end_speech -> final in 2.31s text='hey yandex'
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:root:[STT] done in 1.14s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 2.23s text=''
+INFO:root:[STT] done in 2.90s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 0.47s text=''
+INFO:root:[STT] done in 0.88s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 2.45s text=''
+INFO:root:[STT] done in 2.57s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 1.69s text=''
+INFO:root:[STT] done in 1.01s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 1.21s text=''
+INFO:root:[STT] done in 2.19s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 2.14s text=''
+INFO:root:[STT] done in 6.36s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 4.32s text=''
+INFO:root:[STT] done in 1.40s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 1.07s text=''
+INFO:root:[STT] done in 1.08s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 0.90s text=''
+INFO:root:[STT] done in 1.49s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 1.19s text=''
+INFO:root:[STT] done in 2.58s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 2.02s text=''
+INFO:root:[STT] done in 1.82s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 1.82s text=''
+INFO:root:[STT] done in 11.13s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 8.63s text=''
+INFO:root:[STT] done in 1.93s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 1.61s text=''
+INFO:root:[STT] done in 7.62s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 6.09s text=''
+INFO:root:[STT] done in 3.49s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 2.89s text=''
+INFO:root:[STT] done in 3.53s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 2.74s text=''
+INFO:root:[STT] done in 3.33s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 2.80s text=''
+INFO:root:[STT] done in 1.33s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 1.33s text=''
+INFO:root:[STT] done in 4.97s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 4.23s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:root:[STT] done in 4.50s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 1.89s text=''
+INFO:root:[STT] final timed out after 9.0s; using last partial ''
+INFO:__main__:[STT] end_speech -> final in 9.01s text=''
+INFO:root:[STT] done in 2.06s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 1.81s text=''
+INFO:root:[STT] done in 23.71s (first_final=—) text=''
+INFO:root:[STT] final timed out after 9.0s; using last partial ''
+INFO:__main__:[STT] end_speech -> final in 9.02s text=''
+INFO:root:[STT] done in 16.51s (first_final=—) text=''
+INFO:root:[STT] done in 3.59s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 2.42s text=''
+INFO:root:[STT] done in 1.97s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 2.44s text=''
+INFO:root:[STT] done in 3.73s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 2.89s text=''
+INFO:root:[STT] done in 4.05s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 5.93s text=''
+INFO:root:[STT] done in 5.61s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 5.30s text=''
+INFO:root:[STT] done in 1.40s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 2.54s text=''
+INFO:root:[STT] done in 2.11s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 1.92s text=''
+INFO:root:[STT] done in 4.62s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 4.18s text=''
+INFO:root:[STT] done in 9.32s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 8.48s text=''
+INFO:root:[STT] done in 5.59s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 4.59s text=''
+INFO:root:[STT] final timed out after 9.0s; using last partial ''
+INFO:__main__:[STT] end_speech -> final in 9.00s text=''
+INFO:root:[STT] done in 11.33s (first_final=—) text=''
+INFO:root:[STT] final timed out after 9.0s; using last partial ''
+INFO:__main__:[STT] end_speech -> final in 9.01s text=''
+INFO:root:[STT] done in 9.98s (first_final=—) text=''
+INFO:root:[STT] done in 0.85s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 1.01s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:root:[STT] done in 6.16s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 5.66s text=''
+INFO:root:[STT] done in 2.16s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 2.16s text=''
+INFO:root:[STT] final timed out after 9.0s; using last partial ''
+INFO:__main__:[STT] end_speech -> final in 9.06s text=''
+INFO:root:[STT] done in 2.18s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 2.53s text=''
+INFO:root:[STT] done in 2.11s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 2.64s text=''
+INFO:root:[STT] done in 1.67s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 1.56s text=''
+INFO:root:[STT] final timed out after 9.0s; using last partial ''
+INFO:__main__:[STT] end_speech -> final in 9.01s text=''
+INFO:root:[STT] done in 50.87s (first_final=—) text=''
+INFO:root:[STT] done in 8.30s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 7.41s text=''
+INFO:root:[STT] done in 6.19s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 5.76s text=''
+INFO:root:[STT] done in 40.56s (first_final=—) text=''
+INFO:root:[STT] final timed out after 9.0s; using last partial ''
+INFO:__main__:[STT] end_speech -> final in 9.47s text=''
+INFO:root:[STT] done in 2.91s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 2.72s text=''
+INFO:root:[STT] done in 4.53s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 4.73s text=''
+INFO:root:[STT] done in 7.71s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 7.18s text=''
+INFO:root:[STT] done in 2.73s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 2.58s text=''
+INFO:root:[STT] done in 3.03s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 3.16s text=''
+INFO:root:[STT] done in 43.40s (first_final=—) text=''
+INFO:root:[STT] done in 5.60s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 5.58s text=''
+INFO:root:[STT] done in 1.42s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 1.42s text=''
+INFO:root:[STT] done in 5.64s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 5.42s text=''
+INFO:root:[STT] final timed out after 9.0s; using last partial ''
+INFO:__main__:[STT] end_speech -> final in 9.08s text=''
+INFO:root:[STT] done in 10.90s (first_final=—) text=''
+INFO:root:[STT] done in 3.79s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 3.73s text=''
+INFO:root:[STT] done in 5.62s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 5.30s text=''
+INFO:root:[STT] final timed out after 9.0s; using last partial ''
+INFO:__main__:[STT] end_speech -> final in 9.02s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+ERROR:root:gRPC streaming error: StatusCode.DEADLINE_EXCEEDED — stream timeout
+request-id: a82b5675-0450-4b50-b943-98c6b6106714
+trace-id: 8d09df356f85682d:0b1fa17ead84c11a:85671770e34337cd:1
+
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:root:[STT] done in 3.60s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 3.75s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:root:[STT] final timed out after 9.0s; using last partial ''
+INFO:__main__:[STT] end_speech -> final in 9.01s text=''
+INFO:root:[STT] done in 4.12s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 4.08s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+ERROR:root:gRPC streaming error: StatusCode.DEADLINE_EXCEEDED — stream timeout
+request-id: 4a337805-39cf-4a7b-9327-7bcb961231a6
+trace-id: dfdfb9c3e5207ac2:e0f2aa92eb22f992:325442e2d7067590:1
+
+INFO:root:[STT] final timed out after 9.0s; using last partial ''
+INFO:__main__:[STT] end_speech -> final in 9.12s text=''
+INFO:root:[STT] done in 18.22s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:root:[STT] done in 1.68s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 1.68s text=''
+INFO:root:[STT] final timed out after 9.0s; using last partial ''
+INFO:__main__:[STT] end_speech -> final in 9.10s text=''
+INFO:root:[STT] done in 5.82s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 5.59s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:root:[STT] done in 6.38s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 6.14s text=''
+INFO:root:[STT] final timed out after 9.0s; using last partial ''
+INFO:__main__:[STT] end_speech -> final in 9.14s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+ERROR:root:gRPC streaming error: StatusCode.DEADLINE_EXCEEDED — stream timeout
+request-id: ece64306-0bbb-4546-b36f-251cb43d3848
+trace-id: 00b68f1dc9629b92:a80c696cad09edbb:be1ada0c55cca959:1
+
+INFO:root:[STT] done in 4.69s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 4.51s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:root:[STT] final timed out after 9.0s; using last partial ''
+INFO:__main__:[STT] end_speech -> final in 9.01s text=''
+INFO:root:[STT] done in 11.19s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+ERROR:root:gRPC streaming error: StatusCode.DEADLINE_EXCEEDED — stream timeout
+request-id: 735f7c6e-d91f-45a3-9caa-ba59962dd209
+trace-id: c411567ef2dd4e79:f2ededd0ddb35482:9767686831788ab1:1
+
+INFO:root:[STT] done in 1.90s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 1.92s text=''
+INFO:root:[STT] final timed out after 9.0s; using last partial ''
+INFO:__main__:[STT] end_speech -> final in 9.01s text=''
+INFO:root:[STT] done in 9.55s (first_final=—) text=''
+INFO:root:[STT] done in 4.80s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 4.85s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:root:[STT] done in 5.61s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 4.89s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:root:[STT] done in 5.61s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 5.92s text=''
+INFO:root:[STT] done in 1.58s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 1.58s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:root:[STT] done in 5.07s (first_final=—) text=''
+INFO:__main__:[STT] end_speech -> final in 5.01s text=''
+INFO:__main__:[STT] end_speech -> final in 0.00s text=''
+INFO:root:[STT] final timed out after 9.0s; using last partial ''
+INFO:__main__:[STT] end_speech -> final in 9.02s text=''
+INFO:__main__:WS /ws/chat disconnected
+ERROR:root:gRPC streaming error: StatusCode.DEADLINE_EXCEEDED — stream timeout
+request-id: 321cf388-b4db-438c-a58a-56b69f2aee1d
+trace-id: a5b77f3af8a2bbe4:a834cf67d0fcebc3:9c1310ae15a68fe5:1
+

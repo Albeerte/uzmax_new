@@ -12,8 +12,12 @@ import io, os, re, time, wave, json, hashlib, asyncio, queue as _queue, grpc, lo
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional, List, Tuple
 
-import yandex.cloud.ai.tts.v3.tts_pb2 as tts_pb2
-import yandex.cloud.ai.tts.v3.tts_service_pb2_grpc as tts_grpc
+try:
+    import yandex.cloud.ai.tts.v3.tts_pb2 as tts_pb2
+    import yandex.cloud.ai.tts.v3.tts_service_pb2_grpc as tts_grpc
+except Exception as _exc:
+    tts_pb2 = None
+    tts_grpc = None
 
 
 class YandexTTS:

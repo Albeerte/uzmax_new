@@ -51,6 +51,7 @@ import sys
 import threading
 import time
 import uuid
+import queue as pyqueue
 from contextlib import asynccontextmanager
 from pathlib import Path
 from datetime import datetime
@@ -59,6 +60,7 @@ from urllib.parse import quote
 import serial
 import serial.tools.list_ports
 import numpy as np
+import requests
 try:
     import cv2
 except Exception:
@@ -304,7 +306,23 @@ def _set_thermal_enabled(enabled: bool) -> dict:
 # ──────────────────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-load_dotenv()
+
+
+def load_runtime_env(path: Path) -> None:
+    """Load .env robustly on Windows, including UTF-8 files with BOM."""
+
+    load_dotenv(path, override=True, encoding="utf-8-sig")
+    if not path.exists():
+        return
+    for raw in path.read_text(encoding="utf-8-sig").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ[key.strip().lstrip("\ufeff")] = value.strip().strip('"').strip("'")
+
+
+load_runtime_env(BASE_DIR / ".env")
 
 def configured_secret(value: str | None) -> str | None:
     if not value:
@@ -321,16 +339,19 @@ GEMINI_API_KEY       = configured_secret(os.getenv("GEMINI_API_KEY") or os.geten
 FACE_MATCH_THRESHOLD = float(os.getenv("FACE_MATCH_THRESHOLD", "0.82"))
 FACE_MATCH_MIN_CONFIDENCE = float(os.getenv("FACE_MATCH_MIN_CONFIDENCE", "0.82"))
 FACE_MATCH_MARGIN = float(os.getenv("FACE_MATCH_MARGIN", "0.04"))
+SIMPLE_FACE_MATCH_THRESHOLD = float(os.getenv("SIMPLE_FACE_MATCH_THRESHOLD", "0.40"))
 FACE_LOG_ALL         = os.getenv("FACE_LOG_ALL_COMPARISONS", "false").lower() == "true"
 FACE_MIN_WIDTH_PX    = int(os.getenv("FACE_MIN_WIDTH_PX", "120"))
 FACE_MIN_BLUR_VAR    = float(os.getenv("FACE_MIN_BLUR_VAR", "85"))
-FACE_MIN_SAMPLES     = int(os.getenv("FACE_MIN_SAMPLES", "1"))
+FACE_MIN_SAMPLES     = int(os.getenv("FACE_MIN_SAMPLES", "3"))
+SIMPLE_FACE_MODE     = os.getenv("SIMPLE_FACE_MODE", "true").lower() != "false"
 ENV_PATH             = Path(".env")
 FEVER_THRESHOLD_C    = 37.5
 YANDEX_TTS_VOICE     = os.getenv("YANDEX_TTS_VOICE", "yulduz")
 YANDEX_TTS_VOICE_UZ  = os.getenv("YANDEX_TTS_VOICE_UZ", YANDEX_TTS_VOICE)
 YANDEX_TTS_VOICE_EN  = os.getenv("YANDEX_TTS_VOICE_EN", "john")
 YANDEX_TTS_VOICE_RU  = os.getenv("YANDEX_TTS_VOICE_RU", "yulduz_ru")
+YANDEX_TTS_ROLE_UZ   = os.getenv("YANDEX_TTS_ROLE_UZ", "neutral")
 YANDEX_TTS_SPEED     = float(os.getenv("YANDEX_TTS_SPEED", "1.1"))
 YANDEX_TTS_SAMPLE_RATE = int(os.getenv("YANDEX_TTS_SAMPLE_RATE", "48000"))
 
@@ -494,6 +515,7 @@ SETTINGS_KEYS = [
     "YANDEX_TTS_VOICE_UZ",
     "YANDEX_TTS_VOICE_EN",
     "YANDEX_TTS_VOICE_RU",
+    "YANDEX_TTS_ROLE_UZ",
     "YANDEX_TTS_SPEED",
     "YANDEX_TTS_SAMPLE_RATE",
     "STT_PROVIDER",
@@ -508,11 +530,12 @@ SETTINGS_DEFAULTS = {
     "FACE_MATCH_THRESHOLD": "0.82",
     "FACE_MATCH_MIN_CONFIDENCE": "0.82",
     "FACE_MATCH_MARGIN": "0.04",
-    "FACE_MIN_SAMPLES": "1",
+    "FACE_MIN_SAMPLES": "3",
     "YANDEX_TTS_VOICE": "yulduz",
     "YANDEX_TTS_VOICE_UZ": "yulduz",
     "YANDEX_TTS_VOICE_EN": "john",
     "YANDEX_TTS_VOICE_RU": "yulduz_ru",
+    "YANDEX_TTS_ROLE_UZ": "neutral",
     "YANDEX_TTS_SPEED": "1.1",
     "YANDEX_TTS_SAMPLE_RATE": "48000",
     "STT_PROVIDER": "yandex_stream",
@@ -558,6 +581,22 @@ def write_env_values(new_values: dict) -> None:
 
     ENV_PATH.write_text("\n".join(output).rstrip() + "\n", encoding="utf-8")
 
+
+SERVER_DIR          = Path(__file__).resolve().parent
+PROJECT_ROOT        = SERVER_DIR.parent
+STATIC_DIR          = SERVER_DIR / "static" if (SERVER_DIR / "static" / "index.html").exists() else (PROJECT_ROOT / "static" if (PROJECT_ROOT / "static" / "index.html").exists() else SERVER_DIR / "static")
+STATIC_DIR.mkdir(parents=True, exist_ok=True)
+IMAGES_DIR          = SERVER_DIR / "images"
+IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+DATA_DIR            = SERVER_DIR / "data"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+REGISTER_FACES_DIR  = DATA_DIR / "register_faces"
+REGISTER_FACES_DIR.mkdir(parents=True, exist_ok=True)
+REGISTER_FACES_JSON = REGISTER_FACES_DIR / "registry.json"
+DOCTOR_QUEUE_FILE   = DATA_DIR / "doctor_queue.json"
+ARDUINO_CLI_DEFAULT = Path(r"C:\Program Files\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe")
+ESP32_FQBN_DEFAULT  = os.getenv("ESP32_FQBN", "esp32:esp32:esp32")
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     try:
@@ -572,7 +611,7 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="UzMAX Unified Server", lifespan=lifespan)
+app = FastAPI(title="RoboMed Server", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -582,18 +621,10 @@ app.add_middleware(
 )
 app.include_router(hospital_robot_router)
 
-os.makedirs("static", exist_ok=True)
-os.makedirs("images", exist_ok=True)
-DATA_DIR            = Path("data")
-DATA_DIR.mkdir(parents=True, exist_ok=True)
-REGISTER_FACES_DIR  = DATA_DIR / "register_faces"
-REGISTER_FACES_DIR.mkdir(parents=True, exist_ok=True)
-REGISTER_FACES_JSON = REGISTER_FACES_DIR / "registry.json"
-DOCTOR_QUEUE_FILE   = DATA_DIR / "doctor_queue.json"
-IMAGES_DIR          = Path("images")
-PROJECT_ROOT        = Path(__file__).resolve().parent.parent
-ARDUINO_CLI_DEFAULT = Path(r"C:\Program Files\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe")
-ESP32_FQBN_DEFAULT  = os.getenv("ESP32_FQBN", "esp32:esp32:esp32")
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+face_store = None
+face_encoder = None
 
 FIRMWARE_SKETCHES = {
     "hand": PROJECT_ROOT / "hand" / "hand.ino",
@@ -601,15 +632,6 @@ FIRMWARE_SKETCHES = {
     "move": PROJECT_ROOT / "movements" / "move.ino",
 }
 FIRMWARE_VERSION_DIR = PROJECT_ROOT / "firmware_versions"
-
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-face_store = None
-face_encoder = None
-
-
-# ═══════════════════════════════════════════════════════════════════
-#  ESP32 SERIAL MANAGER
 # ═══════════════════════════════════════════════════════════════════
 
 SERIAL_BAUD = 115200
@@ -765,17 +787,89 @@ def _serial_send(device: str, command: str) -> tuple[bool, str]:
         if ser is None or not ser.is_open:
             return False, "Not connected"
         try:
-            ser.write((command + "\n").encode("utf-8"))
-            time.sleep(0.08)
-            resp = ""
             while ser.in_waiting:
-                resp += ser.readline().decode(errors="ignore").strip() + "\n"
+                ser.readline()
+            ser.write((command + "\n").encode("utf-8"))
+            deadline = time.monotonic() + 0.25
+            resp = ""
+            while time.monotonic() < deadline:
+                while ser.in_waiting:
+                    resp += ser.readline().decode(errors="ignore").strip() + "\n"
+                if resp:
+                    break
+                time.sleep(0.01)
             response = resp.strip() or "OK:NO_RESPONSE"
             response_upper = response.upper()
             accepted = not any(token in response_upper for token in ("ERR", "ERROR", "UNKNOWN"))
             return accepted, response
         except serial.SerialException as exc:
             logger.error("[SERIAL] %s lost: %s", device.upper(), exc)
+            dev["ser"] = None
+            return False, str(exc)
+
+
+def _serial_send_move(command: str) -> tuple[bool, str]:
+    """Send commands using the ESP32 MOVE v4 hold-to-move protocol."""
+
+    dev = _devices["move"]
+    command_upper = command.strip().upper()
+    with dev["lock"]:
+        ser = dev["ser"]
+        if ser is None or not ser.is_open:
+            return False, "Not connected"
+        try:
+            while ser.in_waiting:
+                ser.readline()
+
+            ser.write((command_upper + "\n").encode("utf-8"))
+
+            if command_upper == "MOVE PING":
+                return True, "OK:PING_SENT"
+
+            expected = {
+                "MOVE FWD": "OK:MOVE_FWD",
+                "MOVE BACK": "OK:MOVE_BACK",
+                "MOVE LEFT": "OK:MOVE_LEFT",
+                "MOVE RIGHT": "OK:MOVE_RIGHT",
+                "MOVE CW": "OK:MOVE_CW",
+                "MOVE CCW": "OK:MOVE_CCW",
+                "MOVE STOP": "OK:STOP",
+            }.get(command_upper)
+
+            if command_upper.startswith("MOVE SPEED "):
+                expected = "OK:SPEED"
+            elif command_upper in {"LEFT_FWD", "LEFT_BACK", "RIGHT_FWD", "RIGHT_BACK"}:
+                expected = "OK:" + command_upper
+            elif command_upper == "DEMO":
+                expected = "DEMO:END"
+            elif command_upper == "PING":
+                expected = "DEVICE:MOVE"
+
+            timeout = 2.0 if command_upper.startswith("MOVE ") or command_upper in {"STOP", "DEMO"} else 0.8
+            deadline = time.monotonic() + timeout
+            lines: list[str] = []
+            while time.monotonic() < deadline:
+                while ser.in_waiting:
+                    line = ser.readline().decode(errors="ignore").strip()
+                    if line:
+                        lines.append(line)
+                response_upper = "\n".join(lines).upper()
+                if expected and expected in response_upper:
+                    return True, "\n".join(lines)
+                if any(token in response_upper for token in ("ERR", "ERROR", "UNKNOWN")):
+                    return False, "\n".join(lines)
+                time.sleep(0.01)
+
+            response = "\n".join(lines).strip()
+            if response:
+                response_upper = response.upper()
+                accepted = not any(token in response_upper for token in ("ERR", "ERROR", "UNKNOWN"))
+                return accepted, response
+            if command_upper.startswith("MOVE "):
+                return True, "OK:SENT"
+            return False, "OK:NO_RESPONSE"
+        except serial.SerialException as exc:
+            logger.error("[SERIAL] MOVE lost: %s", exc)
             dev["ser"] = None
             return False, str(exc)
 
@@ -802,6 +896,38 @@ def _normalize_head_command(command: str) -> str:
         # Current HEAD firmware has one 180-degree positional servo: HEAD SERVO <angle>.
         return f"HEAD SERVO {parts[3]}"
     return command
+
+
+def _normalize_move_command(command: str) -> str:
+    """Normalize dashboard and keyboard aliases to ESP32 MOVE v4 protocol."""
+
+    cmd = " ".join(str(command or "").strip().upper().split())
+    aliases = {
+        "W": "MOVE FWD",
+        "S": "MOVE BACK",
+        "A": "MOVE LEFT",
+        "D": "MOVE RIGHT",
+        "ROBOT_FWD": "MOVE FWD",
+        "ROBOT_BACK": "MOVE BACK",
+        "SPIN_CW": "MOVE CW",
+        "SPIN_CCW": "MOVE CCW",
+        "STOP": "MOVE STOP",
+    }
+    if cmd in aliases:
+        return aliases[cmd]
+    if cmd in {"LEFT_FWD", "LEFT_BACK", "RIGHT_FWD", "RIGHT_BACK", "DEMO", "PING"}:
+        return cmd
+    if cmd.startswith("MOVE SPEED "):
+        try:
+            speed = max(0, min(100, int(cmd.split()[-1])))
+        except (TypeError, ValueError):
+            speed = 60
+        return f"MOVE SPEED {speed}"
+    if cmd.startswith("MOVE "):
+        parts = cmd.split()
+        if len(parts) >= 2 and parts[1] in {"FWD", "BACK", "LEFT", "RIGHT", "PING", "STOP", "CW", "CCW"}:
+            return f"MOVE {parts[1]}"
+    return cmd
 
 
 def _serial_disconnect(device: str):
@@ -1189,14 +1315,17 @@ async def head_command(payload: dict):
 @app.post("/api/move/command")
 async def move_command(payload: dict):
     """
-    MOVE FWD 150 / MOVE BACK 150 / MOVE LEFT 120 / MOVE RIGHT 120 / MOVE STOP
+    ESP32 MOVE v4 protocol:
+    MOVE SPEED 60 / MOVE FWD / MOVE BACK / MOVE LEFT / MOVE RIGHT / MOVE PING / MOVE STOP
+    Also accepts W/A/S/D, ROBOT_FWD, ROBOT_BACK, SPIN_CW, SPIN_CCW and test commands.
     Payload: {command: '...'}
     """
-    cmd = str(payload.get("command", "")).strip().upper()
+    requested = str(payload.get("command", "")).strip()
+    cmd = _normalize_move_command(requested)
     if not cmd:
         return JSONResponse({"ok": False, "message": "Empty command"}, status_code=400)
-    ok, resp = await asyncio.to_thread(_serial_send, "move", cmd)
-    return JSONResponse({"ok": ok, "sent": cmd, "response": resp,
+    ok, resp = await asyncio.to_thread(_serial_send_move, cmd)
+    return JSONResponse({"ok": ok, "sent": cmd, "requested": requested if requested.upper() != cmd else None, "response": resp,
                          "connected": _serial_status("move")["connected"]})
 
 
@@ -1225,7 +1354,7 @@ async def get_settings():
 async def save_settings(payload: dict):
     """Persist dashboard settings to .env and refresh in-process config."""
     global FOLDER_ID, API_KEY, GEMINI_API_KEY, FACE_MATCH_THRESHOLD, FACE_MATCH_MIN_CONFIDENCE, FACE_MATCH_MARGIN, FACE_MIN_SAMPLES
-    global YANDEX_TTS_VOICE, YANDEX_TTS_SPEED, YANDEX_TTS_SAMPLE_RATE
+    global YANDEX_TTS_VOICE, YANDEX_TTS_VOICE_UZ, YANDEX_TTS_VOICE_EN, YANDEX_TTS_VOICE_RU, YANDEX_TTS_ROLE_UZ, YANDEX_TTS_SPEED, YANDEX_TTS_SAMPLE_RATE
     global face_encoder, face_store
 
     incoming = payload.get("settings", payload)
@@ -1280,6 +1409,10 @@ async def save_settings(payload: dict):
     FACE_MATCH_MARGIN = match_margin
     FACE_MIN_SAMPLES = face_min_samples
     YANDEX_TTS_VOICE = values.get("YANDEX_TTS_VOICE") or "yulduz"
+    YANDEX_TTS_VOICE_UZ = values.get("YANDEX_TTS_VOICE_UZ") or YANDEX_TTS_VOICE
+    YANDEX_TTS_VOICE_EN = values.get("YANDEX_TTS_VOICE_EN") or "john"
+    YANDEX_TTS_VOICE_RU = values.get("YANDEX_TTS_VOICE_RU") or "yulduz_ru"
+    YANDEX_TTS_ROLE_UZ = values.get("YANDEX_TTS_ROLE_UZ") or "neutral"
     YANDEX_TTS_SPEED = tts_speed
     YANDEX_TTS_SAMPLE_RATE = tts_sample_rate
 
@@ -1292,6 +1425,84 @@ async def save_settings(payload: dict):
         "path": str(ENV_PATH.resolve()),
         "settings": values,
     })
+
+
+def _test_yandex_speechkit() -> dict:
+    """Verify configured Yandex SpeechKit STT and v3 TTS without exposing secrets."""
+
+    result = {
+        "ok": False,
+        "folder_id_set": bool(FOLDER_ID),
+        "api_key_set": bool(API_KEY),
+        "stt_provider": os.getenv("STT_PROVIDER", "yandex_stream"),
+        "tts_voice_uz": YANDEX_TTS_VOICE_UZ,
+        "tts_role_uz": YANDEX_TTS_ROLE_UZ,
+        "tts_sample_rate": YANDEX_TTS_SAMPLE_RATE,
+        "stt": {"ok": False},
+        "tts": {"ok": False},
+    }
+    if not FOLDER_ID or not API_KEY:
+        result["message"] = "YANDEX_API_KEY and YANDEX_CATALOG_ID are required."
+        return result
+
+    try:
+        stt_response = requests.post(
+            "https://stt.api.cloud.yandex.net/speech/v1/stt:recognize",
+            headers={"Authorization": "Api-Key " + API_KEY},
+            params={
+                "folderId": FOLDER_ID,
+                "lang": "uz-UZ",
+                "format": "lpcm",
+                "sampleRateHertz": 16000,
+            },
+            data=b"\0" * 32000,
+            timeout=12,
+        )
+        result["stt"] = {
+            "ok": stt_response.status_code == 200,
+            "status_code": stt_response.status_code,
+            "message": "OK" if stt_response.status_code == 200 else stt_response.text[:220],
+        }
+    except Exception as exc:
+        result["stt"] = {"ok": False, "message": str(exc)[:220]}
+
+    try:
+        text_queue = pyqueue.Queue()
+        audio_queue = pyqueue.Queue()
+        text_queue.put("salom")
+        text_queue.put(None)
+        synth = YandexStreamingSynthesizer(
+            folder_id=FOLDER_ID,
+            iam_token=API_KEY,
+            role=YANDEX_TTS_ROLE_UZ,
+        )
+        synth.synthesize_streaming(
+            text_queue,
+            audio_queue,
+            speed=YANDEX_TTS_SPEED,
+            sample_rate=16000,
+            voice=YANDEX_TTS_VOICE_UZ,
+        )
+        total_bytes = 0
+        while not audio_queue.empty():
+            chunk = audio_queue.get()
+            if chunk:
+                total_bytes += len(chunk)
+        result["tts"] = {
+            "ok": total_bytes > 0,
+            "audio_bytes": total_bytes,
+            "message": "OK" if total_bytes > 0 else "No audio received from Yandex TTS v3.",
+        }
+    except Exception as exc:
+        result["tts"] = {"ok": False, "message": str(exc)[:220]}
+
+    result["ok"] = bool(result["stt"].get("ok") and result["tts"].get("ok"))
+    return result
+
+
+@app.get("/api/yandex/speech-test")
+async def yandex_speech_test():
+    return JSONResponse(await asyncio.to_thread(_test_yandex_speechkit))
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -1308,7 +1519,7 @@ def get_face_encoder() -> FaceEncoder:
 def get_face_store() -> FaceVectorStore:
     global face_store
     if face_store is None:
-        face_store = FaceVectorStore()
+        face_store = FaceVectorStore(db_path=str(DATA_DIR / "faces" / "qdrant"))
     return face_store
 
 
@@ -1918,9 +2129,9 @@ def local_direct_response(user_text: str, current_person=None, lang: str | None 
     if routed:
         return routed
     greetings = {
-        "uz-UZ": "Assalomu alaykum. Men UzMAX tibbiy yordamchiman. Sizni nima bezovta qilyapti?",
-        "en-US": "Hello. I am UzMAX medical assistant. What is bothering you?",
-        "ru-RU": "Здравствуйте. Я медицинский помощник UzMAX. Что вас беспокоит?",
+        "uz-UZ": "Assalomu alaykum! Men yuqumli kasalliklar shifoxonasi uchun RoboMed robotiman. Iltimos, ism va familiyangizni ayting.",
+        "en-US": "Hello. I am RoboMed medical assistant. What is bothering you?",
+        "ru-RU": "Здравствуйте. Я медицинский помощник RoboMed. Что вас беспокоит?",
     }
     if any(word in q for word in ("salom", "assalomu", "alaykum", "hello", "hi", "здравствуйте", "привет")):
         return greetings.get(lang, greetings["uz-UZ"])
@@ -2220,6 +2431,76 @@ def averaged_embedding(samples: list[dict]) -> list[float]:
     return mean.tolist()
 
 
+def cosine_similarity_vectors(a: list[float], b: list[float]) -> float:
+    """Return cosine similarity for two embedding vectors."""
+
+    if not a or not b or len(a) != len(b):
+        return 0.0
+    va = np.asarray(a, dtype=np.float32)
+    vb = np.asarray(b, dtype=np.float32)
+    denom = np.linalg.norm(va) * np.linalg.norm(vb)
+    if denom == 0:
+        return 0.0
+    return float(np.dot(va, vb) / denom)
+
+
+def face_sample_score(sample: dict) -> tuple[float, float, float]:
+    """Rank registration samples; larger/clearer face wins."""
+
+    quality = sample.get("quality") or {}
+    area = float(quality.get("area") or 0)
+    width = float(quality.get("width") or 0)
+    blur = float(quality.get("blur") or 0)
+    lighting = float(quality.get("lighting_score") or quality.get("lighting") or 0)
+    pose = float(quality.get("face_pose_score") or quality.get("pose") or 0)
+    score = area * 0.002 + width * 0.5 + blur + lighting * 25 + pose * 25
+    return score, area, blur
+
+
+def best_face_sample(samples: list[dict]) -> dict:
+    """Pick the best snapshot among collected registration samples."""
+
+    return max(samples, key=face_sample_score)
+
+
+def usable_face_samples(samples: list[dict]) -> list[dict]:
+    """Keep only samples whose snapshot still exists on disk."""
+
+    usable: list[dict] = []
+    for sample in samples:
+        snapshot_path = sample.get("snapshot_path")
+        if snapshot_path and Path(snapshot_path).exists():
+            usable.append(sample)
+    return usable
+
+
+def build_simple_face_person(first_name: str, last_name: str = "", metadata: dict | None = None) -> dict:
+    """Create a registry-only patient record for simple camera mode.
+
+    This avoids the fragile local Qdrant/InsightFace path during real-time camera
+    use. Cloud LLM APIs are not used for biometric identity; Yandex/OpenAI/Gemini
+    remain available for voice/chat workflows.
+    """
+
+    person_id = str(uuid.uuid4())
+    first_name = (first_name or "").strip()
+    last_name = (last_name or "").strip()
+    now = datetime.now().isoformat(timespec="seconds")
+    merged_metadata = dict(metadata or {})
+    merged_metadata.setdefault("created_at", now)
+    merged_metadata["updated_at"] = now
+    return {
+        "person_id": person_id,
+        "first_name": first_name,
+        "last_name": last_name,
+        "full_name": f"{first_name} {last_name}".strip(),
+        "score": 1.0,
+        "snapshots": [],
+        "metadata": merged_metadata,
+        "simple_face_mode": True,
+    }
+
+
 def save_base64_image(image_data: str) -> str:
     image_bytes, _ = decode_base64_image(image_data)
     for old_file in IMAGES_DIR.glob("face_*.jpg"):
@@ -2257,7 +2538,7 @@ def save_registration_pending_snapshot(image_data: str) -> str | None:
     filename = REGISTER_FACES_DIR / f"pending_{ts}.jpg"
     try:
         filename.write_bytes(image_bytes)
-        for old_file in sorted(REGISTER_FACES_DIR.glob("pending_*.jpg"), key=lambda p: p.stat().st_mtime, reverse=True)[12:]:
+        for old_file in sorted(REGISTER_FACES_DIR.glob("pending_*.jpg"), key=lambda p: p.stat().st_mtime, reverse=True)[120:]:
             try:
                 old_file.unlink()
             except OSError:
@@ -2296,6 +2577,7 @@ def upsert_registered_face_registry(person: dict, snapshot_path: str | None = No
         "first_name": person.get("first_name", ""),
         "last_name": person.get("last_name", ""),
         "metadata": person.get("metadata") or {},
+        "simple_embedding": person.get("simple_embedding") or existing.get("simple_embedding"),
         "registered_at": existing.get("registered_at") or datetime.now().isoformat(timespec="seconds"),
         "updated_at": datetime.now().isoformat(timespec="seconds"),
     }
@@ -2406,6 +2688,56 @@ def read_registered_face_registry() -> list[dict]:
     return list(data.get("faces") or []) if isinstance(data, dict) else []
 
 
+def identify_simple_registry(embedding: list[float]) -> dict | None:
+    """Identify a patient from registry.json simple embeddings."""
+
+    if not embedding:
+        return None
+    comparisons: list[dict] = []
+    for entry in read_registered_face_registry():
+        stored_embedding = entry.get("simple_embedding")
+        if not stored_embedding:
+            continue
+        score = cosine_similarity_vectors(embedding, stored_embedding)
+        comparisons.append({
+            "person_id": entry.get("person_id"),
+            "first_name": entry.get("first_name", ""),
+            "last_name": entry.get("last_name", ""),
+            "full_name": f'{entry.get("first_name", "")} {entry.get("last_name", "")}'.strip(),
+            "score": round(score, 4),
+            "metadata": entry.get("metadata") or {},
+            "snapshots": [str((REGISTER_FACES_DIR / entry["file"]).resolve())] if entry.get("file") else [],
+            "registry": entry,
+        })
+    if not comparisons:
+        return None
+    comparisons.sort(key=lambda item: float(item.get("score") or 0), reverse=True)
+    best = comparisons[0]
+    second = comparisons[1] if len(comparisons) > 1 else None
+    second_score = float(second["score"]) if second else None
+    score = float(best["score"])
+    margin = score - second_score if second_score is not None else None
+    matched = score >= SIMPLE_FACE_MATCH_THRESHOLD and (margin is None or margin >= FACE_MATCH_MARGIN)
+    return {
+        "person_id": best.get("person_id"),
+        "first_name": best.get("first_name", ""),
+        "last_name": best.get("last_name", ""),
+        "full_name": best.get("full_name", ""),
+        "score": round(score, 4),
+        "second_score": round(second_score, 4) if second_score is not None else None,
+        "score_margin": round(margin, 4) if margin is not None else None,
+        "threshold": round(SIMPLE_FACE_MATCH_THRESHOLD, 4),
+        "required_margin": round(FACE_MATCH_MARGIN, 4),
+        "snapshots": best.get("snapshots", []),
+        "metadata": best.get("metadata") or {},
+        "matched": matched,
+        "reject_reason": None if matched else ("below_threshold" if score < SIMPLE_FACE_MATCH_THRESHOLD else "ambiguous_match"),
+        "comparisons": comparisons[:10],
+        "person_comparisons": comparisons[:10],
+        "simple_registry": True,
+    }
+
+
 def safe_person_file_id(person_id: str) -> str:
     return re.sub(r"[^A-Za-z0-9_.-]+", "_", person_id).strip("_") or "person"
 
@@ -2513,6 +2845,7 @@ def upsert_patient_record(payload: dict, person_id: str | None = None) -> dict:
         remove_registry_file(existing_registry)
         try:
             embedding = get_face_encoder().extract_embedding_from_path(image_path)
+            person["simple_embedding"] = embedding
             get_face_store().delete_person(person["person_id"])
             get_face_store().register(
                 embedding=embedding,
@@ -2941,7 +3274,7 @@ async def identify_faces_local_payload(payload: dict):
             results.append({
                 "status": "bad_quality",
                 "local": True,
-                "provider": "insightface_buffalo_s",
+                "provider": "simple_opencv" if SIMPLE_FACE_MODE else "insightface_buffalo_s",
                 "reason": quality.get("reason"),
                 "message": quality.get("message"),
                 "faces": visible_faces,
@@ -2952,6 +3285,63 @@ async def identify_faces_local_payload(payload: dict):
             continue
 
         face_image_data = crop_selected_face_base64(image_data, selected_face)
+        if SIMPLE_FACE_MODE:
+            try:
+                snapshot_path = save_registration_pending_snapshot(face_image_data) or save_base64_image(face_image_data)
+            except Exception as exc:
+                logger.warning("Simple face snapshot failed: %s", exc)
+                snapshot_path = None
+            try:
+                embedding = get_face_encoder().extract_embedding_from_base64(face_image_data)
+            except Exception as exc:
+                logger.warning("Simple face embedding failed: %s", exc)
+                embedding = []
+            match = identify_simple_registry(embedding)
+            if embedding:
+                try:
+                    vector_match = get_face_store().identify(
+                        embedding,
+                        threshold=max(SIMPLE_FACE_MATCH_THRESHOLD, min(FACE_MATCH_THRESHOLD, FACE_MATCH_MIN_CONFIDENCE)),
+                        margin=FACE_MATCH_MARGIN,
+                    )
+                    if vector_match and vector_match.get("matched"):
+                        match = vector_match
+                except Exception as exc:
+                    logger.warning("Simple face vector identify skipped: %s", exc)
+            if match and match.get("matched"):
+                if snapshot_path:
+                    try:
+                        get_face_store().add_snapshot(match["person_id"], snapshot_path)
+                    except Exception:
+                        pass
+                results.append({
+                    "status": "known",
+                    "local": True,
+                    "provider": "simple_opencv",
+                    "snapshot_path": snapshot_path,
+                    "person": match,
+                    "faces": visible_faces,
+                    "selected_face": selected_face,
+                    "detected_count": len(detected_faces),
+                    "quality": quality,
+                    "simple_face_mode": True,
+                })
+                continue
+            results.append({
+                "status": "unknown",
+                "local": True,
+                "provider": "simple_opencv",
+                "snapshot_path": snapshot_path,
+                "embedding": embedding,
+                "faces": visible_faces,
+                "selected_face": selected_face,
+                "detected_count": len(detected_faces),
+                "quality": quality,
+                "min_samples": FACE_MIN_SAMPLES,
+                "simple_face_mode": True,
+            })
+            continue
+
         try:
             snapshot_path = save_base64_image(face_image_data)
             embedding     = get_face_encoder().extract_embedding_from_base64(face_image_data)
@@ -2969,9 +3359,13 @@ async def identify_faces_local_payload(payload: dict):
             })
             continue
 
-        store = get_face_store()
-        effective_threshold = max(FACE_MATCH_THRESHOLD, FACE_MATCH_MIN_CONFIDENCE)
-        match = store.identify(embedding, threshold=effective_threshold, margin=FACE_MATCH_MARGIN)
+        try:
+            store = get_face_store()
+            effective_threshold = max(FACE_MATCH_THRESHOLD, FACE_MATCH_MIN_CONFIDENCE)
+            match = store.identify(embedding, threshold=effective_threshold, margin=FACE_MATCH_MARGIN)
+        except Exception as exc:
+            logger.warning("Face vector identify skipped after store error: %s", exc)
+            match = None
 
         if match:
             comps = match.get("comparisons", [])
@@ -3157,7 +3551,7 @@ def build_system_prompt(current_person: dict | None, onboarding: bool, current_l
         lang_instr = "Speak only in Russian. Keep it natural, simple, spoken, and respectful."
 
     base = (
-        "Siz UzMAX robotisiz: yuqumli kasalliklar shifoxonasi uchun aqlli yordamchi. "
+        "Siz RoboMed robotisiz: yuqumli kasalliklar shifoxonasi uchun aqlli yordamchi. "
         "Vazifangiz: kamerada bemorni ko'rganda salomlashish, yangi bemordan faqat ismini so'rash, "
         "thermal kamera skriningini bemor raqamli kartasiga bog'lash, bemordan nima bezovta qilayotganini so'rash "
         "va kerakli shifokorga yo'naltirish. "
@@ -3185,11 +3579,12 @@ def build_system_prompt(current_person: dict | None, onboarding: bool, current_l
         return (
             base
             + " Yangi, tanilmagan bemor bilan tanishyapsiz. Tabiiy va jonli suhbatlashing — qattiq qolip bo'yicha takrorlamang. "
-            + "O'zingizni qisqa tanishtiring (yuqumli kasalliklar shifoxonasi uchun UzMAX roboti) va ism-familiyasini so'rang. "
+            + "O'zingizni qisqa tanishtiring (yuqumli kasalliklar shifoxonasi uchun RoboMed roboti) va ism-familiyasini so'rang. "
             + "Bemor aytgan ismni tabiiy takrorlab tasdiqlating (masalan: 'Ismingiz Abdulla, to'g'rimi?'). "
             + "Bemor tasdiqlagach (masalan 'ha'), register_patient funksiyasini ism va (bo'lsa) familiya bilan chaqiring. "
             + "Agar bemor boshqa ism aytsa yoki tuzatsa, yangi ismni qabul qiling — avvalgi variantda qotib qolmang. "
-            + "Bitta sifatli yuz kadri yetarli; agar register_patient reason='need_more_samples' qaytarsa, bemordan bir oz kameraga qarab turishini so'rang, keyin qayta chaqiring. "
+            + "Ro'yxatdan o'tkazishdan oldin kamera kamida 3 ta sifatli yuz kadrini yig'ishi kerak; tizim eng yaxshi kadrni o'zi tanlaydi. "
+            + "Agar register_patient reason='need_more_samples' qaytarsa, bemordan bir oz kameraga qarab turishini so'rang, keyin qayta chaqiring. "
             + "Ro'yxatdan o'tgani haqida faqat register_patient ok=true qaytargandan so'ng ayting, so'ng shikoyatini so'rang."
         )
 
@@ -3224,7 +3619,7 @@ def local_medical_fallback(user_text: str, current_person=None, lang: str | None
 
     if lang == "en-US":
         if any(word in q for word in ("hello", "hi")):
-            return f"{name}hello. I am UzMAX medical assistant. How can I help you?"
+            return f"{name}hello. I am RoboMed medical assistant. How can I help you?"
         if any(word in q for word in ("temperature", "fever")):
             return f"{name}temperature is only a screening result. If you have fever, weakness, or pain, please see a doctor."
         if any(word in q for word in ("cough", "throat", "flu")):
@@ -3257,7 +3652,7 @@ async def websocket_endpoint(websocket: WebSocket):
     logger.info("WS /ws/chat connected")
 
     recognizer  = YandexSpeechRecognizer(folder_id=FOLDER_ID, iam_token=API_KEY)
-    synthesizer = YandexStreamingSynthesizer(folder_id=FOLDER_ID, iam_token=API_KEY)
+    synthesizer = YandexStreamingSynthesizer(folder_id=FOLDER_ID, iam_token=API_KEY, role=YANDEX_TTS_ROLE_UZ)
     llm         = OpenAIClient()
 
     loop = asyncio.get_running_loop()
@@ -3295,12 +3690,12 @@ async def websocket_endpoint(websocket: WebSocket):
             partial_stt_task = None
 
         stt_partial_queue = asyncio.Queue()
-        provider = os.getenv("STT_PROVIDER", "whisper").lower()
+        provider = os.getenv("STT_PROVIDER", "yandex_stream").lower()
         if provider in ("yandex_stream", "stream", "streaming", "partial"):
             stt_session = SttStreamingSession(recognizer, 16000, loop, stt_partial_queue, current_lang)
         # Non-streaming modes buffer 16 kHz mono PCM and recognise once on end_speech.
         # They are useful fallbacks, but they do not emit live partial text.
-        elif provider == "yandex":
+        elif provider in ("yandex", "yandex_sync"):
             stt_session = YandexSttSession(recognizer, 16000, loop, stt_partial_queue, current_lang)
         else:
             stt_session = WhisperSttSession(llm, 16000, loop, stt_partial_queue, current_lang)
@@ -3355,13 +3750,14 @@ async def websocket_endpoint(websocket: WebSocket):
         nonlocal current_person, pending_registration
         if not pending_registration:
             return None, None
-        samples = list(pending_registration.get("samples") or [])
+        samples = usable_face_samples(list(pending_registration.get("samples") or []))
         if not samples and pending_registration.get("embedding"):
             samples = [{
                 "embedding": pending_registration.get("embedding"),
                 "snapshot_path": pending_registration.get("snapshot_path"),
                 "quality": pending_registration.get("quality") or {},
             }]
+            samples = usable_face_samples(samples)
 
         candidate = pending_registration.get("candidate_name")
         if candidate:
@@ -3374,15 +3770,9 @@ async def websocket_endpoint(websocket: WebSocket):
             if len(samples) < FACE_MIN_SAMPLES:
                 return None, f"Yuz namunasi hali kam. Iltimos kameraga qarang, kamida {FACE_MIN_SAMPLES} ta yaxshi kadr kerak."
             embedding = averaged_embedding(samples)
-            if not embedding:
+            if not embedding and not SIMPLE_FACE_MODE:
                 return None, "Yuz embedding tayyor emas. Iltimos, kameraga qarab qayta urinib ko'ring."
-            best_sample = max(
-                samples,
-                key=lambda item: (
-                    int((item.get("quality") or {}).get("area") or 0),
-                    float((item.get("quality") or {}).get("blur") or 0),
-                ),
-            )
+            best_sample = best_face_sample(samples)
             pending_registration["embedding"] = embedding
             pending_registration["snapshot_path"] = best_sample.get("snapshot_path")
             extracted = candidate
@@ -3405,7 +3795,7 @@ async def websocket_endpoint(websocket: WebSocket):
             full_name = f'{extracted.get("first_name", "")} {extracted.get("last_name", "")}'.strip()
             return None, f"Sizning ism-familiyangiz {full_name}mi? To'g'ri bo'lsa ha, noto'g'ri bo'lsa yo'q deng."
 
-        if not pending_registration.get("embedding") or not pending_registration.get("snapshot_path"):
+        if (not SIMPLE_FACE_MODE and not pending_registration.get("embedding")) or not pending_registration.get("snapshot_path"):
             logger.warning("Pending registration is missing embedding or snapshot_path: %s", pending_registration.keys())
             return None, "Yuz rasmi tayyor emas. Iltimos, kameraga qarab qayta urinib ko'ring."
 
@@ -3413,19 +3803,48 @@ async def websocket_endpoint(websocket: WebSocket):
             {},
             compact_thermal_screening(pending_registration.get("thermal")),
         )
-        current_person = get_face_store().register(
-            embedding=pending_registration["embedding"],
-            first_name=extracted.get("first_name", ""),
-            last_name=extracted.get("last_name", ""),
-            snapshot_path=pending_registration.get("snapshot_path"),
-            metadata=metadata,
-        )
+        if SIMPLE_FACE_MODE:
+            if pending_registration.get("embedding"):
+                try:
+                    current_person = get_face_store().register(
+                        embedding=pending_registration["embedding"],
+                        first_name=extracted.get("first_name", ""),
+                        last_name=extracted.get("last_name", ""),
+                        snapshot_path=pending_registration.get("snapshot_path"),
+                        metadata=metadata,
+                    )
+                    current_person["simple_face_mode"] = True
+                    current_person["simple_embedding"] = pending_registration["embedding"]
+                except Exception as exc:
+                    logger.warning("Simple face vector registration failed: %s", exc)
+                    current_person = build_simple_face_person(
+                        extracted.get("first_name", ""),
+                        extracted.get("last_name", ""),
+                        metadata=metadata,
+                    )
+            else:
+                current_person = build_simple_face_person(
+                    extracted.get("first_name", ""),
+                    extracted.get("last_name", ""),
+                    metadata=metadata,
+                )
+        else:
+            current_person = get_face_store().register(
+                embedding=pending_registration["embedding"],
+                first_name=extracted.get("first_name", ""),
+                last_name=extracted.get("last_name", ""),
+                snapshot_path=pending_registration.get("snapshot_path"),
+                metadata=metadata,
+            )
         permanent_snapshot = persist_registered_face_snapshot(
             pending_registration.get("snapshot_path"),
             current_person["person_id"],
         )
         if permanent_snapshot:
-            get_face_store().add_snapshot(current_person["person_id"], permanent_snapshot)
+            try:
+                get_face_store().add_snapshot(current_person["person_id"], permanent_snapshot)
+            except Exception:
+                pass
             current_person["snapshots"] = [permanent_snapshot]
             upsert_registered_face_registry(current_person, permanent_snapshot)
             permanent_path = Path(permanent_snapshot)
@@ -3492,6 +3911,9 @@ async def websocket_endpoint(websocket: WebSocket):
 
         await websocket.send_json({"type": "response_started", "response_id": generation})
 
+        async def send_tts_text(text: str):
+            return
+
         async def send_tts_audio():
             try:
                 while not response_cancelled.is_set() and generation == response_generation:
@@ -3536,38 +3958,57 @@ async def websocket_endpoint(websocket: WebSocket):
                 last_name = str(args.get("last_name", "")).strip()
                 if not first_name:
                     return {"ok": False, "reason": "no_name", "message": "Ism kerak."}
-                samples = list(pending_registration.get("samples") or [])
+                samples = usable_face_samples(list(pending_registration.get("samples") or []))
                 if not samples and pending_registration.get("embedding"):
                     samples = [{
                         "embedding": pending_registration.get("embedding"),
                         "snapshot_path": pending_registration.get("snapshot_path"),
                         "quality": pending_registration.get("quality") or {},
                     }]
+                    samples = usable_face_samples(samples)
                 if len(samples) < FACE_MIN_SAMPLES:
                     return {"ok": False, "reason": "need_more_samples",
                             "have": len(samples), "needed": FACE_MIN_SAMPLES,
                             "message": f"Yuz namunasi kam ({len(samples)}/{FACE_MIN_SAMPLES}). "
                                        "Bemor bir oz kameraga qarab tursin."}
                 embedding = averaged_embedding(samples)
-                if not embedding:
+                if not embedding and not SIMPLE_FACE_MODE:
                     return {"ok": False, "reason": "no_embedding", "message": "Yuz embedding tayyor emas."}
-                best_sample = max(samples, key=lambda item: (
-                    int((item.get("quality") or {}).get("area") or 0),
-                    float((item.get("quality") or {}).get("blur") or 0),
-                ))
+                best_sample = best_face_sample(samples)
                 snapshot_path = best_sample.get("snapshot_path")
                 metadata = merge_patient_screening(
                     {}, compact_thermal_screening(pending_registration.get("thermal")))
-                person = get_face_store().register(
-                    embedding=embedding,
-                    first_name=first_name,
-                    last_name=last_name,
-                    snapshot_path=snapshot_path,
-                    metadata=metadata,
-                )
+                if SIMPLE_FACE_MODE:
+                    if embedding:
+                        try:
+                            person = get_face_store().register(
+                                embedding=embedding,
+                                first_name=first_name,
+                                last_name=last_name,
+                                snapshot_path=snapshot_path,
+                                metadata=metadata,
+                            )
+                            person["simple_face_mode"] = True
+                            person["simple_embedding"] = embedding
+                        except Exception as exc:
+                            logger.warning("Simple face vector registration failed: %s", exc)
+                            person = build_simple_face_person(first_name, last_name, metadata=metadata)
+                    else:
+                        person = build_simple_face_person(first_name, last_name, metadata=metadata)
+                else:
+                    person = get_face_store().register(
+                        embedding=embedding,
+                        first_name=first_name,
+                        last_name=last_name,
+                        snapshot_path=snapshot_path,
+                        metadata=metadata,
+                    )
                 permanent_snapshot = persist_registered_face_snapshot(snapshot_path, person["person_id"])
                 if permanent_snapshot:
-                    get_face_store().add_snapshot(person["person_id"], permanent_snapshot)
+                    try:
+                        get_face_store().add_snapshot(person["person_id"], permanent_snapshot)
+                    except Exception:
+                        pass
                     person["snapshots"] = [permanent_snapshot]
                     upsert_registered_face_registry(person, permanent_snapshot)
                     permanent_path = Path(permanent_snapshot)
@@ -3631,6 +4072,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     "response_id": generation,
                 })
                 if not response_cancelled.is_set() and generation == response_generation:
+                    await send_tts_text(verbatim)
                     feed_tts(verbatim)
             else:
                 async for llm_chunk in llm.get_response_stream(
@@ -3644,9 +4086,11 @@ async def websocket_endpoint(websocket: WebSocket):
                     sentence_buf += llm_chunk
                     sentence, sentence_buf = flush_sentence_buffer(sentence_buf)
                     if sentence:
+                        await send_tts_text(sentence)
                         feed_tts(sentence)
 
                 if sentence_buf.strip() and not response_cancelled.is_set() and generation == response_generation:
+                    await send_tts_text(sentence_buf.strip())
                     feed_tts(sentence_buf.strip())
         except asyncio.CancelledError:
             raise
@@ -3662,6 +4106,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 "response_id": generation,
             })
             if not response_cancelled.is_set() and generation == response_generation:
+                await send_tts_text(error_text.strip())
                 feed_tts(error_text.strip())
 
         was_cancelled = response_cancelled.is_set() or generation != response_generation
@@ -3708,6 +4153,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 if is_responding and allow_interrupt:
                     force_cancel_response()
                     await websocket.send_json({"type": "interrupt"})
+                if stt_session is None:
                     start_stt()
                     await websocket.send_json({"type": "stt_ready"})
                 if stt_session:
@@ -3742,11 +4188,6 @@ async def websocket_endpoint(websocket: WebSocket):
                         await websocket.send_json({"type": "interrupt"})
 
                 elif msg_type == "person_left":
-                    # The patient stepped out of frame. Keep the greeting trackers and
-                    # the conversation history (messages) so that if the SAME person
-                    # returns shortly we continue the conversation instead of greeting
-                    # again. A different person, or the same one after REGREET_GRACE_S,
-                    # still gets a fresh greeting (see should_greet below).
                     current_person = None
                     pending_registration = None
 
@@ -3783,15 +4224,9 @@ async def websocket_endpoint(websocket: WebSocket):
                             if sample.get("snapshot_path") not in seen_snapshots:
                                 samples.append(sample)
                                 seen_snapshots.add(sample.get("snapshot_path"))
-                        pending_registration["samples"] = samples[-5:]
+                        pending_registration["samples"] = samples[-FACE_MIN_SAMPLES:]
                         if samples:
-                            best_sample = max(
-                                samples,
-                                key=lambda item: (
-                                    int((item.get("quality") or {}).get("area") or 0),
-                                    float((item.get("quality") or {}).get("blur") or 0),
-                                ),
-                            )
+                            best_sample = best_face_sample(samples)
                             pending_registration["embedding"] = averaged_embedding(samples)
                             pending_registration["snapshot_path"] = best_sample.get("snapshot_path")
                         pending_registration["thermal"] = thermal_context or pending_registration.get("thermal")
@@ -3813,7 +4248,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         elif pending_registration:
                             greeting = (
                                 "Oldingizda yangi bemor turibdi. Salom bering va aynan shu mazmunda so'rang: "
-                                '"Men yuqumli kasalliklar shifoxonasi uchun UzMAX robotman. '
+                                '"Men yuqumli kasalliklar shifoxonasi uchun RoboMed robotiman. '
                                 "Iltimos, ism va familiyangizni ayting.\""
                             )
                             greet_key = "unknown_patient"
@@ -3990,6 +4425,7 @@ async def get():
 # ═══════════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
+    # pyrefly: ignore [missing-import]
     import uvicorn
     host = os.getenv("UZMAX_HOST", "0.0.0.0")
     port = int(os.getenv("UZMAX_PORT", "5000"))
