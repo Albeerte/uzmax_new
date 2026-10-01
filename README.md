@@ -54,6 +54,19 @@ devices on the same network can use `http://SERVER_IP:5000/`.
 On first start InsightFace downloads the `buffalo_s` model (~125 MB) into
 `uzmax_server/data/insightface/`.
 
+### Raspberry Pi desktop icon
+
+Use Raspberry Pi OS 64-bit. Install once:
+
+```bash
+bash scripts/rpi/install-desktop.sh
+```
+
+This adds a **RoboMed** icon to the desktop and the app menu. Double-clicking it
+starts the server (if it is not running), then opens the UI full-screen in
+Chromium with camera and microphone access allowed. Server output goes to
+`~/robomed-server.log`. Press `F11` to leave full-screen.
+
 ## Configuration
 
 All keys can be set in `uzmax_server/.env` or from the Settings page in the UI.
