@@ -437,7 +437,7 @@
       position:absolute;inset:0;display:block;
     }
     #face-video{transform:scaleX(-1);}
-    #face-canvas{transform:scaleX(-1);background:transparent;pointer-events:none;}
+    #face-canvas{background:transparent;pointer-events:none;}
     .cam-live-badge{
       position:absolute;top:10px;left:10px;
       padding:4px 10px;border-radius:999px;
@@ -633,12 +633,36 @@
     .patient-form-preview img{width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--border);}
     .patient-form-preview .patient-photo-empty{width:96px;height:96px;}
     .patient-form-status{font-size:.76rem;color:var(--muted);padding:0 14px 12px;}
+    .doctors-shell{max-width:1220px;margin:0 auto;display:flex;flex-direction:column;gap:14px;}
+    .doctor-route-form{display:grid;grid-template-columns:1fr 1fr 1.4fr auto;gap:10px;align-items:end;}
+    .doctor-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;padding:14px;}
+    .doctor-card{padding:12px;border:1px solid var(--border);border-radius:8px;background:var(--card2);min-width:0;}
+    .doctor-card-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;}
+    .doctor-name{font-size:.95rem;font-weight:900;color:var(--text);line-height:1.25;}
+    .doctor-specialty{font-size:.76rem;color:var(--brand);font-weight:800;margin-top:3px;}
+    .doctor-meta{font-size:.74rem;color:var(--muted);line-height:1.5;margin-top:8px;}
+    .queue-board{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;padding:14px;}
+    .queue-card{border:1px solid var(--border);border-radius:8px;background:var(--card2);padding:12px;min-width:0;}
+    .queue-card.called{border-color:#93c5fd;background:#eff6ff;}
+    .queue-card.done{opacity:.72;}
+    .queue-card.cancelled{opacity:.6;background:#f8fafc;}
+    .queue-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;}
+    .queue-number{font-size:1.35rem;font-weight:950;color:var(--brand);line-height:1;}
+    .queue-patient{font-size:.95rem;font-weight:850;color:var(--text);overflow-wrap:anywhere;}
+    .queue-details{font-size:.74rem;color:var(--muted);line-height:1.55;margin-top:8px;}
+    .queue-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+    .queue-status{padding:3px 8px;border-radius:999px;font-size:.67rem;font-weight:850;background:var(--muted-lt);color:var(--muted);}
+    .queue-status.waiting{background:var(--orange-lt);color:var(--orange);}
+    .queue-status.called{background:#dbeafe;color:#2563eb;}
+    .queue-status.done{background:var(--green-lt);color:var(--green);}
+    .queue-status.cancelled{background:var(--red-lt);color:var(--red);}
     /* ── RESPONSIVE ────────────────────────────────────────── */
     @media(max-width:1100px){
       .g3{grid-template-columns:300px 1fr;}
       .g3>.col:last-child{grid-column:span 2;}
       .patient-detail{grid-template-columns:1fr;}
       .patients-summary{grid-template-columns:repeat(2,minmax(0,1fr));}
+      .doctor-route-form{grid-template-columns:1fr 1fr;}
     }
     @media(max-width:740px){
       .g3,.g2{grid-template-columns:1fr;}
@@ -652,7 +676,7 @@
       .settings-actions{align-items:stretch;flex-direction:column;}
       .model-row{align-items:flex-start;flex-direction:column;}
       .guide-grid{grid-template-columns:1fr;}
-      .patients-toolbar,.patient-fields,.patient-history,.patient-form{grid-template-columns:1fr;}
+      .patients-toolbar,.patient-fields,.patient-history,.patient-form,.doctor-route-form{grid-template-columns:1fr;}
       .patients-summary{grid-template-columns:1fr;}
     }
   </style>
@@ -675,6 +699,7 @@
       <span class="tab-dot" id="nav-robot-dot"></span>
     </button>
     <button class="page-tab" id="tab-patients" onclick="showPage('patients')">Patients</button>
+    <button class="page-tab" id="tab-doctors" onclick="showPage('doctors')">Doctors & Queue</button>
     <button class="page-tab" id="tab-settings" onclick="showPage('settings')">⚙️ Settings</button>
   </div>
 
@@ -718,6 +743,10 @@
           </div>
         </div>
         <!-- Person row (shown when identified) -->
+        <div style="display:flex;gap:8px;padding:10px 14px;flex-wrap:wrap;">
+          <button class="btn btn-blue btn-sm" id="new-patient-btn" onclick="startNewPatient()" disabled>Yangi bemor</button>
+          <button class="btn btn-ghost btn-sm" id="cancel-registration-btn" onclick="cancelNewPatient()" hidden>Bekor qilish</button>
+        </div>
         <div class="person-row" id="person-row" style="display:none;">
           <div class="p-avatar" id="p-avatar">👤</div>
           <div>
@@ -1248,6 +1277,65 @@
 </div>
 
 
+<div class="page" id="page-doctors">
+  <div class="doctors-shell">
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Doctors and patient queue</span>
+        <button class="btn btn-ghost btn-sm" onclick="loadDoctorsQueue(true)">Reload</button>
+      </div>
+      <div class="card-body">
+        <div class="patients-summary">
+          <div class="vital-tile"><div class="vital-label">Doctors</div><div class="vital-value" id="doctor-total">0</div></div>
+          <div class="vital-tile"><div class="vital-label">Today</div><div class="vital-value" id="queue-today-total">0</div></div>
+          <div class="vital-tile"><div class="vital-label">Waiting</div><div class="vital-value" id="queue-waiting-total">0</div></div>
+          <div class="vital-tile"><div class="vital-label">Active rooms</div><div class="vital-value" id="queue-active-rooms">0</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">Add patient to queue</span></div>
+      <div class="card-body">
+        <div class="doctor-route-form">
+          <label class="env-field">
+            <span>Patient name</span>
+            <input class="inp" id="route-patient-name" placeholder="Ali Valiyev">
+          </label>
+          <label class="env-field">
+            <span>Phone</span>
+            <input class="inp" id="route-patient-phone" placeholder="+998...">
+          </label>
+          <label class="env-field">
+            <span>Complaint</span>
+            <input class="inp" id="route-patient-message" placeholder="isitma va yo'tal bor">
+          </label>
+          <button class="btn btn-blue" id="route-patient-btn" onclick="routePatientToDoctor()">Add</button>
+        </div>
+        <div class="patient-form-status" id="doctor-route-status" style="padding:10px 0 0;"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">Doctor directory</span></div>
+      <div class="doctor-grid" id="doctor-list">
+        <div class="patient-empty">Loading doctors...</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Today's queue</span>
+        <span class="badge b-muted" id="queue-count">0 waiting</span>
+      </div>
+      <div class="queue-board" id="doctor-queue-list">
+        <div class="patient-empty">Loading queue...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <div class="page" id="page-settings">
   <div style="max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:16px;">
 
@@ -1262,6 +1350,14 @@
           <div class="env-field">
             <label>YANDEX_CATALOG_ID</label>
             <input type="text" class="inp" placeholder="b1g…">
+          </div>
+          <div class="env-field">
+            <label>DEEPSEEK_API_KEY</label>
+            <input type="password" class="inp" placeholder="sk-...">
+          </div>
+          <div class="env-field">
+            <label>DEEPSEEK_MODEL</label>
+            <input type="text" class="inp" placeholder="deepseek-flash">
           </div>
           <div class="env-field">
             <label>OPENAI_API_KEY</label>
@@ -1346,6 +1442,7 @@ function showPage(name) {
   document.getElementById('page-' + name).classList.add('active');
   document.getElementById('tab-' + name).classList.add('active');
   if (name === 'patients') loadPatients();
+  if (name === 'doctors') loadDoctorsQueue();
 }
 
 function setFullViewState(on) {
@@ -1688,11 +1785,210 @@ function renderPatientDetail(patient){
     </div>`;
 }
 
+let doctorsLoaded = false;
+let doctorsLoading = false;
+let allDoctors = [];
+let doctorQueue = [];
+let doctorQueueSummary = null;
+
+function queueStatusLabel(status){
+  const value = (status || 'waiting').toLowerCase();
+  const labels = {
+    waiting: 'Waiting',
+    called: 'Called',
+    done: 'Done',
+    cancelled: 'Cancelled',
+  };
+  return labels[value] || value;
+}
+
+function doctorSummaryFor(doctorId){
+  const items = doctorQueueSummary?.by_doctor || [];
+  return items.find(item => Number(item.doctor_id) === Number(doctorId)) || null;
+}
+
+async function loadDoctorsQueue(force=false){
+  if (doctorsLoading || (doctorsLoaded && !force)) {
+    renderDoctorsQueue();
+    return;
+  }
+  doctorsLoading = true;
+  const doctorList = document.getElementById('doctor-list');
+  const queueList = document.getElementById('doctor-queue-list');
+  if (doctorList) doctorList.innerHTML = '<div class="patient-empty">Loading doctors...</div>';
+  if (queueList) queueList.innerHTML = '<div class="patient-empty">Loading queue...</div>';
+  try {
+    const [directoryRes, queueRes] = await Promise.all([
+      fetch('/api/doctor/directory'),
+      fetch('/api/doctor/queue'),
+    ]);
+    const directoryData = await directoryRes.json();
+    const queueData = await queueRes.json();
+    if (!directoryData.ok) throw new Error(directoryData.message || 'Could not load doctors');
+    if (!queueData.ok) throw new Error(queueData.message || 'Could not load queue');
+    allDoctors = directoryData.doctors || [];
+    doctorQueue = queueData.queue || [];
+    doctorQueueSummary = queueData.summary || null;
+    doctorsLoaded = true;
+    renderDoctorsQueue();
+  } catch(e) {
+    if (doctorList) doctorList.innerHTML = `<div class="patient-empty">Doctors load failed: ${esc(e.message)}</div>`;
+    if (queueList) queueList.innerHTML = `<div class="patient-empty">Queue load failed: ${esc(e.message)}</div>`;
+  } finally {
+    doctorsLoading = false;
+  }
+}
+
+function updateDoctorsSummary(){
+  const today = new Date().toISOString().slice(0, 10);
+  const todayQueue = doctorQueue.filter(item => item.date === today);
+  const waiting = todayQueue.filter(item => (item.status || 'waiting') === 'waiting');
+  const activeRooms = new Set(waiting.map(item => item.room).filter(Boolean)).size;
+  const set = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+  set('doctor-total', allDoctors.length);
+  set('queue-today-total', doctorQueueSummary?.total_today ?? todayQueue.length);
+  set('queue-waiting-total', doctorQueueSummary?.total_waiting ?? waiting.length);
+  set('queue-active-rooms', activeRooms);
+  set('queue-count', `${waiting.length} waiting`);
+}
+
+function renderDoctorList(){
+  const box = document.getElementById('doctor-list');
+  if (!box) return;
+  if (!allDoctors.length) {
+    box.innerHTML = '<div class="patient-empty">No doctors configured.</div>';
+    return;
+  }
+  box.innerHTML = allDoctors.map(doctor => {
+    const summary = doctorSummaryFor(doctor.id);
+    const next = summary?.next_patient;
+    return `
+      <div class="doctor-card">
+        <div class="doctor-card-head">
+          <div>
+            <div class="doctor-name">${esc(doctor.name || 'Doctor')}</div>
+            <div class="doctor-specialty">${esc(doctor.specialty || doctor.speciality || 'Specialist')}</div>
+          </div>
+          <span class="badge b-blue">${esc(String(summary?.waiting ?? 0))}</span>
+        </div>
+        <div class="doctor-meta">
+          Room: ${esc(doctor.room || '—')}<br>
+          Waiting: ${esc(String(summary?.waiting ?? 0))}<br>
+          Estimated wait: ${esc(summary?.next_patient?.estimated_wait_text || '—')}<br>
+          For: ${esc(doctor.use_for || '—')}
+          ${next ? `<br>Next: #${esc(next.queue_number)} ${esc(next.patient_name || 'Bemor')}` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderDoctorQueue(){
+  const box = document.getElementById('doctor-queue-list');
+  if (!box) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const items = doctorQueue
+    .filter(item => item.date === today && (item.status || 'waiting') !== 'cancelled')
+    .sort((a, b) => Number(a.doctor_id || 0) - Number(b.doctor_id || 0)
+      || Number(a.queue_number || 0) - Number(b.queue_number || 0));
+  if (!items.length) {
+    box.innerHTML = '<div class="patient-empty">No patients in today’s queue.</div>';
+    return;
+  }
+  box.innerHTML = items.map(item => {
+    const status = (item.status || 'waiting').toLowerCase();
+    const itemId = encodeURIComponent(item.id || '');
+    return `
+      <div class="queue-card ${esc(status)}">
+        <div class="queue-top">
+          <div>
+            <div class="queue-patient">${esc(item.patient_name || 'Bemor')}</div>
+            <div class="queue-details">${esc(item.doctor_name || 'Doctor')} · ${esc(item.specialty || '')}</div>
+          </div>
+          <div class="queue-number">#${esc(item.queue_number || '—')}</div>
+        </div>
+        <div class="queue-details">
+          Room: ${esc(item.room || '—')} · Estimated wait: ${esc(item.estimated_wait_text || '—')}<br>
+          Phone: ${esc(item.patient_phone || 'Kiritilmagan')}<br>
+          Created: ${esc(formatDateTime(item.created_at))}
+        </div>
+        <div class="queue-actions">
+          <span class="queue-status ${esc(status)}">${esc(queueStatusLabel(status))}</span>
+          <button class="btn btn-ghost btn-sm" onclick="updateQueueStatus(decodeURIComponent('${itemId}'),'called')">Call</button>
+          <button class="btn btn-green btn-sm" onclick="updateQueueStatus(decodeURIComponent('${itemId}'),'done')">Done</button>
+          <button class="btn btn-red btn-sm" onclick="updateQueueStatus(decodeURIComponent('${itemId}'),'cancelled')">Cancel</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderDoctorsQueue(){
+  updateDoctorsSummary();
+  renderDoctorList();
+  renderDoctorQueue();
+}
+
+async function routePatientToDoctor(){
+  const btn = document.getElementById('route-patient-btn');
+  const status = document.getElementById('doctor-route-status');
+  const oldText = btn?.textContent || 'Add';
+  const patient_name = document.getElementById('route-patient-name')?.value.trim() || '';
+  const patient_phone = document.getElementById('route-patient-phone')?.value.trim() || '';
+  const patient_message = document.getElementById('route-patient-message')?.value.trim() || '';
+  if (!patient_name || !patient_message) {
+    if (status) status.textContent = 'Patient name and complaint are required.';
+    return;
+  }
+  if (btn) { btn.disabled = true; btn.textContent = 'Adding...'; }
+  if (status) status.textContent = '';
+  try {
+    const res = await fetch('/api/doctor/route', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({patient_name, patient_phone, patient_message, lang:'uz-UZ'})
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.message || 'Could not route patient');
+    if (status) {
+      status.textContent = `${data.doctor?.name || 'Doctor'} · ${data.doctor?.room || ''} · queue #${data.queue?.number || ''} · ${data.queue?.estimated_wait_text || ''}`;
+    }
+    document.getElementById('route-patient-message').value = '';
+    doctorsLoaded = false;
+    patientsLoaded = false;
+    await loadDoctorsQueue(true);
+  } catch(e) {
+    if (status) status.textContent = e.message || String(e);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = oldText; }
+  }
+}
+
+async function updateQueueStatus(queueId, statusValue){
+  if (!queueId) return;
+  try {
+    const res = await fetch(`/api/doctor/queue/${encodeURIComponent(queueId)}`, {
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({status:statusValue})
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.message || 'Queue update failed');
+    doctorQueue = data.queue || doctorQueue;
+    doctorQueueSummary = data.summary || doctorQueueSummary;
+    patientsLoaded = false;
+    renderDoctorsQueue();
+  } catch(e) {
+    alert('Queue update failed: ' + (e.message || e));
+  }
+}
+
 // Settings tab is generated here so the form stays clean even when older
 // placeholder markup is still present in the HTML.
 const SETTINGS_KEYS = [
   'YANDEX_API_KEY',
   'YANDEX_CATALOG_ID',
+  'DEEPSEEK_API_KEY',
+  'DEEPSEEK_MODEL',
+  'DEEPSEEK_BASE_URL',
   'OPENAI_API_KEY',
   'OPENAI_MODEL',
   'GEMINI_API_KEY',
@@ -1702,6 +1998,8 @@ const SETTINGS_KEYS = [
   'FACE_MATCH_MIN_CONFIDENCE',
   'FACE_MATCH_MARGIN',
   'FACE_MIN_SAMPLES',
+  'FACE_MIN_WIDTH_PX',
+  'FACE_MIN_BLUR_VAR',
   'YANDEX_TTS_VOICE',
   'YANDEX_TTS_VOICE_UZ',
   'YANDEX_TTS_VOICE_EN',
@@ -1758,6 +2056,9 @@ function buildSettingsUI(){
           <div class="env-grid">
             ${fieldHtml('YANDEX_API_KEY','Yandex SpeechKit API key','AQVN...', 'password')}
             ${fieldHtml('YANDEX_CATALOG_ID','Yandex catalog/folder ID','b1g...')}
+            ${fieldHtml('DEEPSEEK_API_KEY','DeepSeek API key','sk-...', 'password')}
+            ${fieldHtml('DEEPSEEK_MODEL','DeepSeek chatbot model','deepseek-flash')}
+            ${fieldHtml('DEEPSEEK_BASE_URL','DeepSeek base URL','https://api.deepseek.com')}
             ${fieldHtml('OPENAI_API_KEY','OpenAI API key','sk-...', 'password')}
             ${fieldHtml('OPENAI_MODEL','OpenAI chatbot model','gpt-4o-mini')}
             ${fieldHtml('GEMINI_API_KEY','Gemini API key (optional legacy)','AIza...', 'password')}
@@ -1767,6 +2068,8 @@ function buildSettingsUI(){
             ${fieldHtml('FACE_MATCH_MIN_CONFIDENCE','Minimum face confidence','0.82')}
             ${fieldHtml('FACE_MATCH_MARGIN','Face ambiguity margin','0.04')}
             ${fieldHtml('FACE_MIN_SAMPLES','Face samples to register','3')}
+            ${fieldHtml('FACE_MIN_WIDTH_PX','Minimum detected face width','90')}
+            ${fieldHtml('FACE_MIN_BLUR_VAR','Minimum face sharpness','65')}
             ${fieldHtml('YANDEX_TTS_VOICE','Yandex default TTS voice','yulduz')}
             ${fieldHtml('YANDEX_TTS_VOICE_UZ','Yandex Uzbek TTS voice','yulduz')}
             ${fieldHtml('YANDEX_TTS_VOICE_EN','Yandex English TTS voice','john')}
@@ -1774,7 +2077,7 @@ function buildSettingsUI(){
             ${fieldHtml('YANDEX_TTS_ROLE_UZ','Yandex Uzbek voice role','neutral')}
             ${fieldHtml('YANDEX_TTS_SPEED','Yandex TTS speed','1.1')}
             ${fieldHtml('YANDEX_TTS_SAMPLE_RATE','Yandex TTS sample rate','48000')}
-            ${fieldHtml('STT_PROVIDER','Speech-to-text provider','yandex_stream')}
+            ${fieldHtml('STT_PROVIDER','Speech-to-text provider','yandex')}
             ${fieldHtml('ARDUINO_CLI_PATH','Arduino CLI path','C:\\\\Program Files\\\\Arduino IDE\\\\resources\\\\app\\\\lib\\\\backend\\\\resources\\\\arduino-cli.exe')}
             ${fieldHtml('ESP32_FQBN','ESP32 board FQBN','esp32:esp32:esp32')}
           </div>
@@ -1791,6 +2094,8 @@ function buildSettingsUI(){
           ${modelRow('GPT 4o mini','OPENAI_MODEL','gpt-4o-mini','Set')}
           ${modelRow('GPT 4.1 mini','OPENAI_MODEL','gpt-4.1-mini','Set')}
           ${modelRow('GPT 4.1 nano','OPENAI_MODEL','gpt-4.1-nano','Set')}
+          ${modelRow('DeepSeek Flash','DEEPSEEK_MODEL','deepseek-flash','Set')}
+          ${modelRow('DeepSeek V4 Pro','DEEPSEEK_MODEL','deepseek-v4-pro','Set')}
           ${modelRow('Uzbek v3 female','YANDEX_TTS_VOICE_UZ','yulduz','Uz voice')}
           ${modelRow('Uzbek v3 female','YANDEX_TTS_VOICE_UZ','zamira','Uz voice')}
           ${modelRow('Uzbek v1/v3 female','YANDEX_TTS_VOICE_UZ','nigora','Uz voice')}
@@ -1820,17 +2125,16 @@ function buildSettingsUI(){
             </div>
 
             <div class="guide-card">
-              <h3>OpenAI chatbot</h3>
+              <h3>DeepSeek chatbot</h3>
               <ol>
-                <li>Open the OpenAI platform API keys page.</li>
+                <li>Open the DeepSeek platform API keys page.</li>
                 <li>Create a new secret key.</li>
-                <li>Paste it into <code>OPENAI_API_KEY</code>.</li>
-                <li>Put a model in <code>OPENAI_MODEL</code>, for example <code>gpt-4o-mini</code>.</li>
+                <li>Paste it into <code>DEEPSEEK_API_KEY</code>.</li>
+                <li>Put a model in <code>DEEPSEEK_MODEL</code>, for example <code>deepseek-flash</code>.</li>
               </ol>
               <div class="guide-actions">
-                <a class="btn btn-ghost btn-sm" href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">Create key</a>
-                <a class="btn btn-ghost btn-sm" href="https://help.openai.com/en/articles/4936850-where-do-i-find-my-openai-api-key" target="_blank" rel="noopener">Help</a>
-                <a class="btn btn-ghost btn-sm" href="https://platform.openai.com/docs/api-reference" target="_blank" rel="noopener">API docs</a>
+                <a class="btn btn-ghost btn-sm" href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">Create key</a>
+                <a class="btn btn-ghost btn-sm" href="https://api-docs.deepseek.com/" target="_blank" rel="noopener">API docs</a>
               </div>
             </div>
 
@@ -1854,7 +2158,7 @@ function buildSettingsUI(){
         <div class="card-head"><span class="card-title">Local hardware notes</span></div>
         <div class="card-body">
           <div class="gesture-help">
-            Yandex keys power Uzbek STT/TTS. OpenAI is the chatbot LLM provider.
+            Yandex keys power Uzbek STT/TTS. DeepSeek is used for chatbot replies when <code>DEEPSEEK_API_KEY</code> is set; OpenAI remains available for Whisper STT or as a fallback chatbot provider.
             Face ID runs locally with InsightFace. After saving, new chat and face requests use the updated values.
             Uzbek TTS defaults to <code>yulduz</code> on SpeechKit v3. <code>zamira</code> and <code>nigora</code> are available presets.
           </div>
@@ -1928,6 +2232,7 @@ let pendingChatMessages = [];
 let isListening = false, isAgentSpeaking = false;
 let audioQ = [], playingAudio = false, currentRespId = null;
 let liveMode = false, allowInterrupt = false;
+let microphoneAutoBlocked = false;
 let sttReady = false, sttReadyTimer = null, pendingAutoListen = false, ttsStreamEnded = false;
 let llmStreamDone = false, responseTextCommitted = false;
 let activeAudioSources = [];
@@ -1942,20 +2247,21 @@ let noiseFloor = 0.005;   // adaptive ambient-noise level (EMA), calibrated per 
 let preRoll = [];         // recent frames held until speech starts (clean clip onset)
 
 // Absolute floors (quiet rooms) — the adaptive thresholds never go below these.
-const VAD_START = 0.012;
-const VAD_STOP = 0.007;
-const VAD_MIN_SPEECH_MS = 220;
-const VAD_SILENCE_MS = 1150;
-const VAD_MAX_MS = 18000;
-const VAD_NOSPEECH_MS = 8000;   // if no speech starts within this, end the turn (no 18s hang)
+const VAD_START = 0.008;
+const VAD_STOP = 0.005;
+const VAD_MIN_SPEECH_MS = 320;
+const VAD_SILENCE_MS = 1600;
+const VAD_MAX_MS = 24000;
+const VAD_NOSPEECH_MS = 10000;  // if no speech starts within this, end the turn without hanging
 // Speech must exceed noiseFloor * MARGIN; below floor * SILENCE_MARGIN counts as silence.
 // This makes steady background noise NOT register as speech (no stuck "listening").
 const VAD_FLOOR_ADAPT = 0.97;
-const VAD_SPEECH_MARGIN = 3.0;
-const VAD_SILENCE_MARGIN = 1.8;
-const PREROLL_FRAMES = 4;
+const VAD_SPEECH_MARGIN = 2.2;
+const VAD_SILENCE_MARGIN = 1.55;
+const PREROLL_FRAMES = 8;
 
 function enableLiveConversation() {
+  if (microphoneAutoBlocked) return;
   liveMode = true;
   allowInterrupt = true;
   const liveToggle = document.getElementById('tgl-live');
@@ -1986,10 +2292,16 @@ function wsInit() {
 
   ws.onopen = () => {
     setWS(true);
+    activeKnownPersonId = null;
+    faceIdentityRevision++;
     chatMsg('ai', '✅ Server bilan ulandi');
     ws.send(JSON.stringify({ type:'set_settings', live_mode:liveMode, allow_interrupt:allowInterrupt }));
     ws.send(JSON.stringify({ type:'set_language',  lang: document.getElementById('lang-sel').value }));
     pendingChatMessages.splice(0).forEach(message => ws.send(message));
+    if (registrationSessionId) {
+      registrationSessionId = 'starting';
+      ws.send(JSON.stringify({type:'start_registration'}));
+    }
   };
   ws.onclose = () => { setWS(false); setTimeout(wsInit, 3000); };
   ws.onerror = () => setWS(false);
@@ -1997,6 +2309,32 @@ function wsInit() {
   ws.onmessage = async ({ data }) => {
     const m = JSON.parse(data);
     switch (m.type) {
+      case 'registration_started':
+        resetRegistrationView(m.registration_id);
+        document.getElementById('chat-box').textContent = '';
+        if (!faceEnabled) chatMsg('ai', "Yangi bemorning yuzini olish uchun kamerani yoqing.");
+        break;
+      case 'registration_cancelled':
+        resetRegistrationView(null);
+        setFaceUi(faceEnabled ? 'scanning' : 'standby');
+        break;
+      case 'patient_registered':
+        registrationSessionId = null;
+        document.getElementById('cancel-registration-btn').hidden = true;
+        faceIdentityRevision++;
+        activeKnownPersonId = m.person.person_id;
+        activeKnownPerson = m.person;
+        pendingUnknownFace = false;
+        unknownFaceSamples = [];
+        unknownFaceSince = 0;
+        lastFaceIdentifyAt = 0;
+        setFaceUi('known', m.person, "Ro'yxatdan o'tgan bemor");
+        if (document.getElementById('page-patients')?.classList.contains('active')) loadPatients(true);
+        if (document.getElementById('page-doctors')?.classList.contains('active')) loadDoctorsQueue(true);
+        break;
+      case 'queue_updated':
+        if (document.getElementById('page-doctors')?.classList.contains('active')) loadDoctorsQueue(true);
+        break;
       case 'stt_partial':
         document.getElementById('stt-partial').textContent = m.text;
         break;
@@ -2063,6 +2401,7 @@ function wsInit() {
           llmStreamDone = true;
           commitAssistantText();
           if (ttsStreamEnded && !playingAudio && !audioQ.length && !browserSpeechSpeaking && !browserSpeechQueue.length) finishAssistantPlayback();
+          if (document.getElementById('page-doctors')?.classList.contains('active')) loadDoctorsQueue(true);
         }
         break;
       case 'interrupt':
@@ -2292,11 +2631,11 @@ async function startRec() {
   } catch(e) {
     clearTimeout(sttReadyTimer);
     sttReady = false;
+    disableUnavailableMicrophone(e);
     ws.send(JSON.stringify({type:'end_speech'}));
-    micState('idle');
-    alert('Microphone: ' + e.message);
     return;
   }
+  microphoneAutoBlocked = false;
   micSource = audioCtx.createMediaStreamSource(mediaStream);
   micMuteGain = audioCtx.createGain();
   micMuteGain.gain.value = 0;
@@ -2514,7 +2853,20 @@ function updateDirectionFromText(text='') {
   }
 }
 
+function disableUnavailableMicrophone(error) {
+  microphoneAutoBlocked = true;
+  liveMode = false;
+  pendingAutoListen = false;
+  document.getElementById('tgl-live').checked = false;
+  sendChatJson({type:'set_settings', live_mode:false, allow_interrupt:allowInterrupt});
+  micState('idle');
+  document.getElementById('stt-partial').textContent = error?.name === 'NotAllowedError'
+    ? "Mikrofonga ruxsat berilmagan. Kamera va matnli suhbat ishlayveradi."
+    : "Mikrofon ochilmadi. Kamera va matnli suhbat ishlayveradi.";
+}
+
 document.getElementById('tgl-live').addEventListener('change', function() {
+  microphoneAutoBlocked = false;
   liveMode = this.checked;
   ws && ws.send(JSON.stringify({type:'set_settings',live_mode:liveMode,allow_interrupt:allowInterrupt}));
   pendingAutoListen = liveMode;
@@ -2762,11 +3114,16 @@ function thermalConnect() {
 //  FACE RECOGNITION
 // ═══════════════════════════════════════════════════════════════
 let faceEnabled = false, faceCamSt = null;
+let faceCameraGeneration = 0;
+let registrationSessionId = null;
 let facePresent = false;
 let lastFaceSeenAt = 0;
 let lastFaceIdentifyAt = 0;
 let lastDetectedFaceCount = 0;
 let activeKnownPersonId = null;
+let activeKnownPerson = null;
+let faceIdentityRevision = 0;
+let unknownFaceSince = 0;
 let activePersonName = '';
 let pendingUnknownFace = false;
 let unknownFaceSamples = [];
@@ -2775,8 +3132,9 @@ let faceLoopTimer = null;
 let localFaceDetector = null;
 let localFaceDetectorStatus = 'idle';
 const FACE_ABSENCE_MS = 1800;
-const FACE_DETECT_INTERVAL_MS = 300;
-const FACE_IDENTIFY_COOLDOWN_MS = 700;
+const FACE_DETECT_INTERVAL_MS = 220;
+const FACE_IDENTIFY_COOLDOWN_MS = 850;
+const FACE_UNKNOWN_GRACE_MS = 3000;
 const FACE_MIN_SAMPLES = 3;
 
 function setFaceUi(state, person=null, detail='') {
@@ -2851,11 +3209,12 @@ function drawFaceBoxes(boxes=[], selectedFace=null) {
   ctx.font = '16px Inter, sans-serif';
   const visibleBoxes = selectedFace ? [selectedFace] : (boxes.slice(0, 1));
   visibleBoxes.forEach((box) => {
-    const x = Number(box.x || 0);
+    const sourceX = Number(box.x || 0);
     const y = Number(box.y || 0);
     const w = Number(box.w || 0);
     const h = Number(box.h || 0);
     if (w <= 0 || h <= 0) return;
+    const x = canvas.width - sourceX - w;
     ctx.lineWidth = 4;
     ctx.strokeStyle = '#22c55e';
     ctx.fillStyle = '#22c55e';
@@ -2872,7 +3231,7 @@ function initLocalFaceDetector() {
     return;
   }
   try {
-    localFaceDetector = new FaceDetector({fastMode: true, maxDetectedFaces: 1});
+    localFaceDetector = new FaceDetector({fastMode: true, maxDetectedFaces: 3});
     localFaceDetectorStatus = 'ready';
   } catch (e) {
     localFaceDetector = null;
@@ -2896,7 +3255,7 @@ async function detectFacesLocal(b64=null) {
   initLocalFaceDetector();
   const vid = document.getElementById('face-video');
   if (!vid || !vid.videoWidth || !vid.videoHeight) return [];
-  if (localFaceDetectorStatus !== 'ready' || !localFaceDetector) {
+  const serverDetect = async () => {
     if (!b64) return [];
     try {
       const res = await fetch('/api/faces/detect', {
@@ -2915,17 +3274,21 @@ async function detectFacesLocal(b64=null) {
       console.warn('Server face detect fallback error:', e);
       return [];
     }
+  };
+  if (localFaceDetectorStatus !== 'ready' || !localFaceDetector) {
+    return serverDetect();
   }
   try {
     const detected = await localFaceDetector.detect(vid);
-    return (detected || [])
+    const localBoxes = (detected || [])
       .map(normalizeLocalFaceBox)
       .filter(Boolean)
       .sort((a, b) => Number(b.area || 0) - Number(a.area || 0))
       .slice(0, 1);
+    return localBoxes.length ? localBoxes : await serverDetect();
   } catch (e) {
     console.warn('Local face detect error:', e);
-    return [];
+    return serverDetect();
   }
 }
 
@@ -2960,6 +3323,8 @@ function addUnknownFaceSample(face) {
 
 function notifyFaceIdentity(face) {
   if (!face) return;
+  if (registrationSessionId === 'starting' || registrationSessionId === 'cancelling') return;
+  if (registrationSessionId && face.status === 'known') return;
   const boxes = Array.isArray(face.faces) ? face.faces : [];
   drawFaceBoxes(boxes, face.selected_face || null);
 
@@ -2969,6 +3334,9 @@ function notifyFaceIdentity(face) {
       facePresent = false;
       lastDetectedFaceCount = 0;
       activeKnownPersonId = null;
+      activeKnownPerson = null;
+      faceIdentityRevision++;
+      unknownFaceSince = 0;
       pendingUnknownFace = false;
       unknownFaceSamples = [];
       drawFaceBoxes([]);
@@ -2990,12 +3358,14 @@ function notifyFaceIdentity(face) {
       : face.reason === 'face_blurry'
         ? 'Kadr xira: iltimos qimirlamay kameraga qarang'
         : 'Face ID uchun kadr sifati yetarli emas';
-    setFaceUi('unknown', null, reasonText);
+    setFaceUi(activeKnownPersonId ? 'known' : 'unknown', activeKnownPerson, reasonText);
     return;
   }
 
   if (face.status === 'known' && face.person) {
     const p = face.person;
+    activeKnownPerson = p;
+    unknownFaceSince = 0;
     setFaceUi('known', p);
     if (activeKnownPersonId === p.person_id && !pendingUnknownFace) return;
     enableLiveConversation();
@@ -3011,6 +3381,11 @@ function notifyFaceIdentity(face) {
   }
 
   if (face.status === 'unknown') {
+    if (activeKnownPersonId) {
+      if (!unknownFaceSince) unknownFaceSince = Date.now();
+      if (Date.now() - unknownFaceSince < FACE_UNKNOWN_GRACE_MS) return;
+    }
+    activeKnownPerson = null;
     addUnknownFaceSample(face);
     const needed = Number(face.min_samples || FACE_MIN_SAMPLES);
     const bestSample = bestUnknownFaceSample();
@@ -3024,6 +3399,7 @@ function notifyFaceIdentity(face) {
     sendChatJson({
       type:'face_identity',
       person:null,
+      registration_id:registrationSessionId,
       thermal:patientThermalPayload(),
       pending_registration:{
         embedding:bestSample?.embedding || face.embedding || null,
@@ -3040,6 +3416,40 @@ function notifyFaceIdentity(face) {
   setFaceUi('empty');
 }
 
+function resetRegistrationView(sessionId) {
+  registrationSessionId = sessionId;
+  faceIdentityRevision++;
+  activeKnownPersonId = null;
+  activeKnownPerson = null;
+  pendingUnknownFace = false;
+  unknownFaceSamples = [];
+  unknownFaceSince = 0;
+  facePresent = false;
+  lastFaceIdentifyAt = 0;
+  document.getElementById('cancel-registration-btn').hidden = !sessionId;
+  updateDirectionVitals('', '', 'Waiting');
+  if (sessionId) setFaceUi('unknown', null, "Yangi bemorni ro'yxatdan o'tkazish");
+}
+
+function startNewPatient() {
+  if (!faceEnabled) {
+    chatMsg('ai', "Avval kamerani yoqing.");
+    return;
+  }
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    chatMsg('ai', "Server bilan ulanishni kuting.");
+    return;
+  }
+  resetRegistrationView('starting');
+  stopAudioPlayback();
+  sendChatJson({type:'start_registration'});
+}
+
+function cancelNewPatient() {
+  resetRegistrationView('cancelling');
+  sendChatJson({type:'cancel_registration'});
+}
+
 async function resetFaceId() {
   if (!confirm('Reset all Face ID data? This removes registered faces, face vectors, and saved Face ID images.')) return;
   const btn = document.getElementById('face-reset-btn');
@@ -3052,17 +3462,7 @@ async function resetFaceId() {
     const res = await fetch('/api/faces/reset', {method:'POST'});
     const data = await res.json();
     if (!data.ok) throw new Error((data.errors || []).join('; ') || 'Reset failed');
-    if (faceCamSt) { faceCamSt.getTracks().forEach(t=>t.stop()); faceCamSt=null; }
-    faceEnabled = false;
-    const toggle = document.getElementById('tgl-face');
-    if (toggle) toggle.checked = false;
-    facePresent = false;
-    lastDetectedFaceCount = 0;
-    activeKnownPersonId = null;
-    pendingUnknownFace = false;
-    unknownFaceSamples = [];
-    drawFaceBoxes([]);
-    document.getElementById('cam-live').style.display='none';
+    stopFaceCamera();
     setFaceUi('standby');
     patientsLoaded = false;
     allPatients = [];
@@ -3079,54 +3479,104 @@ async function resetFaceId() {
   }
 }
 
-document.getElementById('tgl-face').addEventListener('change', async function() {
-  faceEnabled = this.checked;
-  if (faceEnabled) {
-    try {
-      setFaceUi('scanning');
-      faceCamSt = await navigator.mediaDevices.getUserMedia({ video:{width:640,height:480} });
-      const vid = document.getElementById('face-video');
-      vid.srcObject = faceCamSt; vid.play();
-      const cvs = document.getElementById('face-canvas');
-      vid.addEventListener('loadedmetadata',()=>{ cvs.width=vid.videoWidth; cvs.height=vid.videoHeight; });
-      document.getElementById('cam-live').style.display='block';
-      initLocalFaceDetector();
-      detectFace();
-    } catch(e) {
-      setFaceUi('error', null, 'Camera: ' + e.message);
-      alert('Camera: '+e.message);
-      this.checked=false;
-      faceEnabled=false;
-    }
-  } else {
-    if (faceCamSt) { faceCamSt.getTracks().forEach(t=>t.stop()); faceCamSt=null; }
-    document.getElementById('cam-live').style.display='none';
-    facePresent = false;
-    lastDetectedFaceCount = 0;
-    activeKnownPersonId = null;
-    pendingUnknownFace = false;
-    unknownFaceSamples = [];
-    drawFaceBoxes([]);
-    setFaceUi('standby');
+function cameraErrorMessage(error) {
+  if (error?.name === 'NotAllowedError' || error?.name === 'SecurityError') {
+    return "Kameraga ruxsat berilmagan. Brauzerda kamera ruxsatini yoqing.";
   }
+  if (error?.name === 'NotFoundError') return "Kamera topilmadi. Kamera ulanganini tekshiring.";
+  if (error?.name === 'NotReadableError' || /in use|could not start video|busy/i.test(error?.message || '')) {
+    return "Kamera boshqa dasturda band. Boshqa RoboMed oynasi yoki kamera dasturini yopib, Enable'ni qayta yoqing.";
+  }
+  return `Kamera ishga tushmadi: ${error?.message || 'qayta urinib ko\'ring'}`;
+}
+
+function stopFaceCamera() {
+  faceEnabled = false;
+  faceCameraGeneration++;
+  clearTimeout(faceLoopTimer);
+  faceLoopTimer = null;
+  if (faceCamSt) faceCamSt.getTracks().forEach(track => track.stop());
+  faceCamSt = null;
+  document.getElementById('face-video').srcObject = null;
+  document.getElementById('tgl-face').checked = false;
+  document.getElementById('cam-live').style.display = 'none';
+  facePresent = false;
+  lastDetectedFaceCount = 0;
+  lastFaceIdentifyAt = 0;
+  activeKnownPersonId = null;
+  activeKnownPerson = null;
+  faceIdentityRevision++;
+  unknownFaceSince = 0;
+  pendingUnknownFace = false;
+  unknownFaceSamples = [];
+  registrationSessionId = null;
+  document.getElementById('new-patient-btn').disabled = true;
+  document.getElementById('cancel-registration-btn').hidden = true;
+  drawFaceBoxes([]);
+  sendChatJson({type:'person_left'});
+}
+
+async function startFaceCamera() {
+  stopFaceCamera();
+  faceEnabled = true;
+  document.getElementById('tgl-face').checked = true;
+  const generation = faceCameraGeneration;
+  setFaceUi('scanning');
+  try {
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error('Kamera uchun localhost yoki HTTPS kerak.');
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video:{width:{ideal:960}, height:{ideal:720}, frameRate:{ideal:24, max:30}, facingMode:'user'}
+    });
+    if (!faceEnabled || generation !== faceCameraGeneration) {
+      stream.getTracks().forEach(track => track.stop());
+      return;
+    }
+    faceCamSt = stream;
+    const vid = document.getElementById('face-video');
+    vid.srcObject = stream;
+    await vid.play();
+    if (!faceEnabled || generation !== faceCameraGeneration) return;
+    document.getElementById('new-patient-btn').disabled = false;
+    stream.getVideoTracks().forEach(track => track.addEventListener('ended', () => {
+      if (generation !== faceCameraGeneration) return;
+      stopFaceCamera();
+      setFaceUi('error', null, "Kamera uzildi. Uni ulab, Enable'ni qayta yoqing.");
+    }, {once:true}));
+    document.getElementById('cam-live').style.display = 'block';
+    initLocalFaceDetector();
+    detectFace(generation);
+  } catch (error) {
+    if (generation !== faceCameraGeneration) return;
+    stopFaceCamera();
+    setFaceUi('error', null, cameraErrorMessage(error));
+  }
+}
+
+document.getElementById('tgl-face').addEventListener('change', function() {
+  if (this.checked) startFaceCamera();
+  else { stopFaceCamera(); setFaceUi('standby'); }
 });
+window.addEventListener('pagehide', stopFaceCamera);
 
 function captureFaceFrameB64() {
   const vid = document.getElementById('face-video');
+  if (!vid || vid.readyState < 2 || !vid.videoWidth || !vid.videoHeight) return null;
   const cvs = document.createElement('canvas');
   cvs.width = vid.videoWidth || 640;
   cvs.height = vid.videoHeight || 480;
   cvs.getContext('2d').drawImage(vid, 0, 0);
-  return cvs.toDataURL('image/jpeg', .78);
+  return cvs.toDataURL('image/jpeg', .86);
 }
 
 // Heavy path: local InsightFace embedding + local Qdrant. No cloud API.
 async function runFaceIdentify(b64, selectedFace=null) {
   if (identifyInFlight) return;
   identifyInFlight = true;
+  const requestRevision = faceIdentityRevision;
   lastFaceIdentifyAt = Date.now();
   try {
-    const facePayload = {image: b64};
+    if (registrationSessionId === 'starting' || registrationSessionId === 'cancelling') return;
+    const facePayload = {image: b64, registration_mode:registrationSessionId ? 'new' : undefined};
     if (selectedFace) {
       facePayload.selected_face = selectedFace;
       facePayload.client_detected = true;
@@ -3137,7 +3587,7 @@ async function runFaceIdentify(b64, selectedFace=null) {
     });
     const data = await res.json();
     const face = (data.faces || [])[0];
-    if (face) notifyFaceIdentity(face);
+    if (face && faceEnabled && requestRevision === faceIdentityRevision) notifyFaceIdentity(face);
   } catch(e) {
     console.warn('Face identify error:', e);
   } finally {
@@ -3147,11 +3597,13 @@ async function runFaceIdentify(b64, selectedFace=null) {
 
 // Fast path: browser-local face detection only. No server round-trip.
 // It keeps boxes responsive and triggers the heavy identify in the background when due.
-async function detectFace() {
-  if (!faceEnabled) return;
-  const b64 = captureFaceFrameB64();
+async function detectFace(generation=faceCameraGeneration) {
+  if (!faceEnabled || generation !== faceCameraGeneration) return;
   try {
+    const b64 = captureFaceFrameB64();
+    if (!b64) return;
     const boxes = await detectFacesLocal(b64);
+    if (!faceEnabled || generation !== faceCameraGeneration) return;
     const selected = boxes[0] || null;
     drawFaceBoxes(boxes, selected);
     if (selected) {
@@ -3162,15 +3614,15 @@ async function detectFace() {
         runFaceIdentify(b64, selected);   // fire-and-forget, does not block box updates
       }
     } else {
-      if (localFaceDetectorStatus === 'unsupported' && Date.now() - lastFaceIdentifyAt > FACE_IDENTIFY_COOLDOWN_MS && !identifyInFlight) {
-        runFaceIdentify(b64, null);
-      }
       notifyFaceIdentity({status: 'no_face', faces: []});
     }
   } catch(e) {
     console.warn('Local face detect loop error:', e);
+  } finally {
+    if (faceEnabled && generation === faceCameraGeneration) {
+      faceLoopTimer = setTimeout(() => detectFace(generation), FACE_DETECT_INTERVAL_MS);
+    }
   }
-  if (faceEnabled) faceLoopTimer = setTimeout(detectFace, FACE_DETECT_INTERVAL_MS);
 }
 
 

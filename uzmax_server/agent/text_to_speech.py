@@ -5,8 +5,12 @@ import base64
 import requests
 from io import BytesIO
 
-from google import genai
-from google.genai import types
+try:
+    from google import genai
+    from google.genai import types
+except ImportError:
+    genai = None
+    types = None
 
 import io, os, re, time, wave, json, hashlib, asyncio, queue as _queue, grpc, logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -246,6 +250,8 @@ class GoogleTTSv1:
         out_cache_dir: если указать, будет кэшировать WAV по ключу (voice+hash(text+params)).
         rpm_hard_limit: простой лимитер (скользящее окно на минуту).
         """
+        if genai is None or types is None:
+            raise RuntimeError("Google Gemini TTS is unavailable in this Python environment.")
         self.client = genai.Client(api_key=api_key) if api_key else genai.Client()
         self.model = model
         self.voice_name = voice_name

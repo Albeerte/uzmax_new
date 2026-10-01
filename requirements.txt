@@ -23,6 +23,8 @@ scipy
 
 # Vector Database & Computer Vision
 qdrant-client
+insightface>=2.0
+onnxruntime
 opencv-python<5
 Pillow
 numpy

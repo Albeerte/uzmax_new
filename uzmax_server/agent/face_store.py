@@ -56,6 +56,10 @@ class FaceVectorStore:
         return (arr / norm).tolist()
 
     @staticmethod
+    def _name_key(person: dict) -> str:
+        return " ".join(f'{person.get("first_name", "")} {person.get("last_name", "")}'.lower().split())
+
+    @staticmethod
     def _cosine_similarity(a: list[float], b: list[float]) -> float:
         va = np.asarray(a, dtype=np.float32)
         vb = np.asarray(b, dtype=np.float32)
@@ -89,13 +93,23 @@ class FaceVectorStore:
         self._ensure_collection(len(normalized))
 
         try:
-            records = self.client.search(
-                collection_name=self.collection_name,
-                query_vector=normalized,
-                limit=1000,
-                with_payload=True,
-                with_vectors=False,
-            )
+            if hasattr(self.client, "query_points"):
+                # qdrant-client >= 1.13 removed search(); without scores every match fails.
+                records = self.client.query_points(
+                    collection_name=self.collection_name,
+                    query=normalized,
+                    limit=1000,
+                    with_payload=True,
+                    with_vectors=False,
+                ).points
+            else:
+                records = self.client.search(
+                    collection_name=self.collection_name,
+                    query_vector=normalized,
+                    limit=1000,
+                    with_payload=True,
+                    with_vectors=False,
+                )
         except Exception:
             records, _ = self.client.scroll(
                 collection_name=self.collection_name,
@@ -154,7 +168,17 @@ class FaceVectorStore:
 
         person_matches = sorted(people.values(), key=lambda item: item["score"], reverse=True)
         best_person = person_matches[0] if person_matches else None
-        second_person = person_matches[1] if len(person_matches) > 1 else None
+        # A record with the same name is almost certainly the same patient registered
+        # twice, so it must not make the match "ambiguous". Compare against the best
+        # *different* person only.
+        best_name = self._name_key(best_person) if best_person else ""
+        second_person = next(
+            (
+                item for item in person_matches[1:]
+                if not best_name or self._name_key(item) != best_name
+            ),
+            None,
+        )
         second_score = float(second_person["score"]) if second_person else None
         score_margin = float(best_person["score"]) - second_score if second_score is not None else None
         payload = best_record.payload or {}
