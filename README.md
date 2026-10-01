@@ -86,7 +86,8 @@ All keys can be set in `uzmax_server/.env` or from the Settings page in the UI.
 | `FACE_MATCH_MARGIN` | `0.04` | Required lead over the next *different* person |
 | `SIMPLE_FACE_MODE` | `true` | Register from one good frame instead of `FACE_MIN_SAMPLES` |
 | `FACE_MIN_SAMPLES` | `3` | Frames collected before registering (when simple mode is off) |
-| `FACE_MIN_WIDTH_PX`, `FACE_MIN_BLUR_VAR` | `90`, `65` | Face quality gates |
+| `FACE_MIN_WIDTH_PX` | `90` | Minimum face width in pixels |
+| `FACE_MIN_BLUR_VAR` | `0` (off) | Minimum sharpness; raise it to reject blurry frames |
 | `ARDUINO_CLI_PATH`, `ESP32_FQBN` | — | Firmware compile/upload |
 
 ## How face recognition works
@@ -95,7 +96,7 @@ All keys can be set in `uzmax_server/.env` or from the Settings page in the UI.
    `/api/faces/identify-local`.
 2. Faces are detected with **InsightFace SCRFD**. OpenCV Haar cascades are used
    only if InsightFace is unavailable.
-3. The largest face passes quality checks (size, blur), is cropped and turned
+3. The largest face passes a size check, is cropped and turned
    into a 512-dim **ArcFace** embedding.
 4. The embedding is compared with Qdrant and `registry.json`. A match needs a
    score ≥ `FACE_MATCH_THRESHOLD` and a margin over the next person with a

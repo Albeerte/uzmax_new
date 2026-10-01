@@ -342,7 +342,7 @@ FACE_MATCH_MARGIN = float(os.getenv("FACE_MATCH_MARGIN", "0.04"))
 SIMPLE_FACE_MATCH_THRESHOLD = float(os.getenv("SIMPLE_FACE_MATCH_THRESHOLD", "0.40"))
 FACE_LOG_ALL         = os.getenv("FACE_LOG_ALL_COMPARISONS", "false").lower() == "true"
 FACE_MIN_WIDTH_PX    = int(os.getenv("FACE_MIN_WIDTH_PX", "90"))
-FACE_MIN_BLUR_VAR    = float(os.getenv("FACE_MIN_BLUR_VAR", "65"))
+FACE_MIN_BLUR_VAR    = float(os.getenv("FACE_MIN_BLUR_VAR", "0"))
 FACE_MIN_SAMPLES     = int(os.getenv("FACE_MIN_SAMPLES", "3"))
 SIMPLE_FACE_MODE     = os.getenv("SIMPLE_FACE_MODE", "true").lower() != "false"
 ENV_PATH             = Path(".env")
@@ -540,7 +540,7 @@ SETTINGS_DEFAULTS = {
     "FACE_MATCH_MARGIN": "0.04",
     "FACE_MIN_SAMPLES": "3",
     "FACE_MIN_WIDTH_PX": "90",
-    "FACE_MIN_BLUR_VAR": "65",
+    "FACE_MIN_BLUR_VAR": "0",
     "YANDEX_TTS_VOICE": "yulduz",
     "YANDEX_TTS_VOICE_UZ": "yulduz",
     "YANDEX_TTS_VOICE_EN": "john",
@@ -1398,7 +1398,7 @@ async def save_settings(payload: dict):
     except ValueError:
         return JSONResponse({"ok": False, "message": "FACE_MIN_WIDTH_PX must be an integer"}, status_code=400)
     try:
-        face_min_blur = max(0.0, float(values.get("FACE_MIN_BLUR_VAR") or "65"))
+        face_min_blur = max(0.0, float(values.get("FACE_MIN_BLUR_VAR") or "0"))
     except ValueError:
         return JSONResponse({"ok": False, "message": "FACE_MIN_BLUR_VAR must be a number"}, status_code=400)
     try:
